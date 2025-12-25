@@ -8,6 +8,7 @@ chromadb
 logs
 examples
 surveys
+.env
 
 src/demo/survey_generation_pipeline/info
 src/demo/survey_generation_pipeline/txt
