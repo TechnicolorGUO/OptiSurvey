@@ -1,39 +1,22 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/TechnicolorGUO/InteractiveSurvey/blob/main/resources/logo1.svg">
-    <source media="(prefers-color-scheme: light)" srcset="https://github.com/TechnicolorGUO/InteractiveSurvey/blob/main/resources/logo1.svg">
-    <img src="https://github.com/TechnicolorGUO/InteractiveSurvey/blob/main/resources/logo1.svg" alt="Logo" width="50%" height="50%">
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/TechnicolorGUO/OptiSurvey/blob/main/resources/logo1.png">
+    <source media="(prefers-color-scheme: light)" srcset="https://github.com/TechnicolorGUO/OptiSurvey/blob/main/resources/logo1.png">
+    <img src="https://github.com/TechnicolorGUO/OptiSurvey/blob/main/resources/logo1.png" alt="Logo" width="50%" height="50%">
   </picture>
 </p>
 
-<p align="center">An <b>Interactive</b> and <b>Personalized</b> literature survey generation system.</p>
+<p align="center">An <b>Interactive</b> and <b>Personalized</b> literature survey generation system for optical communication.</p>
 <p align="center">
   <img alt="python" src="https://img.shields.io/badge/python-3.10-blue">
   <img alt="Static Badge" src="https://img.shields.io/badge/license-apache-green">
-  <a href="https://arxiv.org/abs/2504.08762" target="_blank">
-    <img alt="arXiv" src="https://img.shields.io/badge/arXiv-2504.08762-red" />
-  </a>
 </p>
 <div align="center">
 <hr>
 
-[Quick Start](#quick-start) | [Use Docker(Recommended)](#use-docker) | [Paper](https://arxiv.org/abs/2504.08762)
+[Quick Start](#quick-start) | [Use Docker(Recommended)](#use-docker)
 
 </div>
-
----
-
-## 📰 News  
-<table>
-  <tr>
-    <td style="white-space: nowrap;"><strong>2025/7/8</strong></td>
-    <td>🚀 Our <strong>InteractiveSurvey demo is now officially online!</strong> Experience the power of AI-driven survey paper generation with our interactive web platform. Try it now! 🌟</td>
-  </tr>
-  <tr>
-    <td style="white-space: nowrap;"><strong>2025/4/15</strong></td>
-    <td>The paper <strong><a href="https://arxiv.org/abs/2504.08762">InteractiveSurvey: An LLM-based Personalized and Interactive Survey Paper Generation System</a></strong> is now released! 🎉✨</td>
-  </tr>
-</table>
 
 ---
 
