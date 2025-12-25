@@ -6,10 +6,11 @@
   </picture>
 </p>
 
-<p align="center">An <b>Interactive</b> and <b>Personalized</b> literature survey generation system for optical communication.</p>
+<p align="center"><b>OptiSurvey</b>: The First AI-Powered Literature Survey System Tailored for Optical Communication Research</p>
 <p align="center">
   <img alt="python" src="https://img.shields.io/badge/python-3.10-blue">
   <img alt="Static Badge" src="https://img.shields.io/badge/license-apache-green">
+  <img alt="domain" src="https://img.shields.io/badge/domain-optical%20communication-orange">
 </p>
 <div align="center">
 <hr>
@@ -22,28 +23,55 @@
 
 ## Introduction
 
-**InteractiveSurvey** is an **interactive** and **personalized** tool designed to help researchers efficiently conduct **literature reviews**. By leveraging **natural language processing (NLP)** and **Large Language Models (LLMs)**, it enables users to collect, organize, and generate structured literature surveys **effortlessly**.
+**OptiSurvey** is a specialized **AI-powered literature survey generation system** designed exclusively for **optical communication research**. As optical communication technologies rapidly evolve—spanning fiber optics, free-space optical communications, silicon photonics, coherent detection, quantum communication, and next-generation networking—researchers face the challenge of keeping pace with an exponentially growing body of literature.
+
+OptiSurvey addresses this challenge by leveraging cutting-edge **Large Language Models (LLMs)** and **Natural Language Processing (NLP)** techniques to provide optical communication researchers with an **intelligent**, **interactive**, and **personalized** tool for conducting comprehensive literature reviews.
+
+### 🌟 Why OptiSurvey for Optical Communication?
+
+- **🔬 Domain-Specific Intelligence**: Purpose-built to understand optical communication terminology, concepts, and research paradigms, including modulation formats, channel modeling, signal processing, photonic devices, and network architectures.
+- **🎯 Specialized Paper Analysis**: Intelligently extracts and organizes key information relevant to optical communication, such as transmission rates, wavelength ranges, BER performance, system configurations, and experimental setups.
+- **📊 Research Trend Identification**: Automatically identifies emerging trends in optical communication research, from WDM systems to space-division multiplexing, AI-enabled optical networks, and beyond.
 
 ### 🔥 Key Features:
-- **📝 Automatic Literature Review Generation**: Extract key insights from papers and generate structured literature surveys.  
-- **💡 Interactive Exploration**: Dynamically filter, refine, and customize your survey in real-time.  
-- **📄 PDF Export**: Easily generate high-quality literature surveys in PDF format with either **Markdown** or **LaTeX**.  
-- **⚡ Multimodality**: Extract figures from references and insert customized figures by yourself.
-- **🐳 Docker Support**: Quickly deploy and run the application in a containerized environment.  
+
+- **📝 Automatic Literature Survey Generation**: Extract key insights from optical communication papers and generate well-structured, publication-ready literature surveys.
+- **💡 Interactive Exploration**: Dynamically filter, refine, and customize your survey in real-time based on specific topics (e.g., coherent detection, ROADM, or optical amplifiers).
+- **🔍 Intelligent Clustering**: Automatically categorize papers by research methods, technologies, or application domains specific to optical communication.
+- **📄 Professional PDF Export**: Generate high-quality literature surveys in PDF format with either **Markdown** or **LaTeX**, formatted to academic standards.
+- **⚡ Multimodality Support**: Extract and analyze figures, diagrams, and experimental setup illustrations from optical communication papers.
+- **🐳 Docker Support**: Quickly deploy and run the application in a containerized environment for seamless collaboration.  
 
 
 ![flochart](/resources/flowchart.png)
 
-
-https://github.com/user-attachments/assets/15beefae-3b85-453e-a10d-3c210a80933b
-
-**📺 Demo Video**: You can watch the demo video at [https://www.bilibili.com/video/BV1dju2z8ESw/?spm_id_from=333.1387.homepage.video_card.click](https://www.bilibili.com/video/BV1dju2z8ESw/?spm_id_from=333.1387.homepage.video_card.click)
-
 ---
+
+## 🔭 Application Scenarios in Optical Communication
+
+**OptiSurvey** is specifically designed to support optical communication researchers across various domains:
+
+### Research Areas Covered:
+- **📡 Fiber Optic Communication**: High-speed transmission systems, optical amplifiers (EDFA, Raman, SOA), dispersion compensation
+- **🌐 Optical Networks**: ROADM, WDM/DWDM systems, software-defined optical networks (SDON), elastic optical networks
+- **💫 Free-Space Optical Communications**: FSO systems, atmospheric turbulence mitigation, hybrid RF/FSO networks
+- **🔬 Silicon Photonics**: Photonic integrated circuits, on-chip optical interconnects, modulators and detectors
+- **🎯 Advanced Modulation & Detection**: Coherent detection, QAM, OFDM, probabilistic shaping, DSP algorithms
+- **🔐 Quantum Communication**: QKD systems, quantum networks, entanglement distribution
+- **📶 Next-Gen Technologies**: Space-division multiplexing, orbital angular momentum (OAM), AI-enabled optical networks
+
+### Use Cases:
+✅ **PhD Students**: Quickly review state-of-the-art before starting research  
+✅ **Researchers**: Stay updated with latest advances in specific optical communication topics  
+✅ **Lab Groups**: Organize and synthesize team's collected papers into coherent surveys  
+✅ **Grant Writers**: Generate comprehensive background sections for research proposals  
+✅ **Course Instructors**: Create up-to-date teaching materials on optical communication topics
 
 <hr>
 
 ## Examples
+
+See how **OptiSurvey** automatically generates comprehensive literature surveys for optical communication research. The system intelligently organizes papers, extracts key technical details, and produces publication-ready documents.
 
 ### Markdown Example
 https://github.com/user-attachments/assets/fdf48927-ae0f-4040-9595-4a509ea62f08
@@ -58,20 +86,20 @@ https://github.com/user-attachments/assets/db2b08f5-a328-43e1-9ae9-41c09b54214b
 
 ## Quick Start
 
-Interactive requires Python 3.10. A minimum 20G disk space is required
+OptiSurvey requires Python 3.10. A minimum 20G disk space is required for the system and models.
 
 ### 1️⃣ Clone the Repository  
 Clone the repository to your local machine:  
 ```sh
-git clone https://github.com/TechnicolorGUO/InteractiveSurvey
-cd InteractiveSurvey
+git clone https://github.com/TechnicolorGUO/OptiSurvey
+cd OptiSurvey
 ```
 
 ### 2️⃣ Set Up the Environment
 Create a virtual environment and activate it:
 ```sh
-conda create -n interactivesurvey python=3.10
-conda activate interactivesurvey
+conda create -n optisurvey python=3.10
+conda activate optisurvey
 ```
 Install the required dependencies:
 ```sh
@@ -110,7 +138,7 @@ Once the server is running, open your browser and navigate to:
 ```
 http://localhost:8001
 ```
-You can now use the ​Auto Literature Survey Generator to upload, analyze, and generate literature surveys!
+You can now use **OptiSurvey** to upload optical communication papers, analyze research trends, and generate comprehensive literature surveys tailored to your research focus!
 
 <hr>
 
@@ -127,10 +155,10 @@ Replace the placeholders with your actual OpenAI API key, API base URL, and pref
 If you have GPU support, you can build and run the GPU version of the Docker container using the following commands:
 ```bash
 # Build the Docker image
-docker build -t interactivesurvey .
+docker build -t optisurvey .
 
 # Run the Docker container (with GPU support)
-docker run --gpus all -p 8001:8001 interactivesurvey
+docker run --gpus all -p 8001:8001 optisurvey
 ```
 
 ### CPU Version
@@ -141,10 +169,10 @@ If you do not have GPU support, you can run the CPU version of the Docker contai
 Then run the following commands:
 ```bash
 # Build the Docker image
-docker build -t interactivesurvey-cpu .
+docker build -t optisurvey-cpu .
 
 # Run the Docker container (with CPU support)
-docker run -p 8001:8001 interactivesurvey-cpu
+docker run -p 8001:8001 optisurvey-cpu
 ```
 
 After starting the container, access (http://localhost:8001)[http://localhost:8001] to confirm that the application is running correctly.
@@ -178,11 +206,11 @@ The `main.py` contains the following code to generate a survey:
 if __name__ == "__main__":
     root_path = "."
     pdf_path = "./sample_pdfs" #Set this to the path of the folder containing your PDF files.
-    survey_title = "Automating Literature Review Generation with LLM" #Set this to the title of your survey.
-    cluster_standard = "method" #Set this to the clustering standard you want to use.
-    asg_system = ASG_system(root_path, 'test', pdf_path, survey_title, cluster_standard) #test refers to the survey_id which prevent you from parsing pdfs again.
+    survey_title = "Advances in Coherent Optical Communication Systems" #Set this to the title of your survey.
+    cluster_standard = "method" #Set this to the clustering standard you want to use (e.g., method, technology, application).
+    asg_system = ASG_system(root_path, 'test', pdf_path, survey_title, cluster_standard) #test refers to the survey_id which prevents re-parsing pdfs.
     asg_system.download_pdf() 
-    # Downloads PDFs to "./sample_pdfs". Add with your own files for upload.
+    # Downloads PDFs to "./sample_pdfs". Add your own optical communication papers for analysis.
     asg_system.parsing_pdfs()
     asg_system.description_generation()
     asg_system.agglomerative_clustering()
@@ -191,9 +219,23 @@ if __name__ == "__main__":
     asg_system.citation_generation()
 ```
 
-## Contact
-If you have any enquiries, please email [guobeichen0228@gmail.com](guobeichen0228@gmail.com)
+---
 
-## License
+## 🚀 Why Choose OptiSurvey?
+
+Unlike generic literature review tools, **OptiSurvey** understands the unique characteristics of optical communication research:
+- Recognizes domain-specific terminology and metrics (BER, OSNR, dispersion, spectral efficiency, etc.)
+- Identifies relationships between different optical technologies and methods
+- Understands the evolution of optical communication standards and technologies
+- Provides intelligent clustering tailored to optical communication research paradigms
+
+## 📬 Contact
+
+For questions, suggestions, or collaborations related to **OptiSurvey**, please contact:
+📧 [guobeichen0228@gmail.com](mailto:guobeichen0228@gmail.com)
+
+We welcome feedback from the optical communication research community!
+
+## 📄 License
 
 [Apache License 2.0](LICENSE)
