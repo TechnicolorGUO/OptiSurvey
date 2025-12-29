@@ -274,14 +274,14 @@ def md_to_tex_section(section):
     
     # 根据 heading level 生成对应的 LaTeX 命令
     if level == 0:
-        latex_heading = f"\\section{{{heading_text}}}"
+        latex_heading = r"\section{" + heading_text + "}"
     elif level == 1:
-        latex_heading = f"\\subsection{{{heading_text}}}"
+        latex_heading = r"\subsection{" + heading_text + "}"
     elif level == 2:
-        latex_heading = f"\\subsubsection{{{heading_text}}}"
+        latex_heading = r"\subsubsection{" + heading_text + "}"
     else:
         # 更深入的层级可自行添加
-        latex_heading = f"\\paragraph{{{heading_text}}}"
+        latex_heading = r"\paragraph{" + heading_text + "}"
     
     # 先粗略替换图片 div 为占位符，后续交由 OpenAI 模型或自身再做处理
     # 这里我们先把 <div style="text-align:center">...<img ...>...</div><div ...>Fig x: ...</div> 转换为一个自定义标记 [IMG_BLOCK] ... [END_IMG_BLOCK]
@@ -424,13 +424,13 @@ def md_to_tex_section_without_jpg(section):
     # 1) 根据 level 生成对应的 LaTeX 命令
     #    你也可以改成更灵活的逻辑，比如多级。
     if level == 0:
-        latex_heading = f"\\section{{{heading_text}}}"
+        latex_heading = r"\section{" + heading_text + "}"
     elif level == 1:
-        latex_heading = f"\\subsection{{{heading_text}}}"
+        latex_heading = r"\subsection{" + heading_text + "}"
     elif level == 2:
-        latex_heading = f"\\subsubsection{{{heading_text}}}"
+        latex_heading = r"\subsubsection{" + heading_text + "}"
     else:
-        latex_heading = f"\\paragraph{{{heading_text}}}"
+        latex_heading = r"\paragraph{" + heading_text + "}"
 
     # 2) 判断是否要跳过 LLM 转换
     #    这里给出几种常见原因：
@@ -770,14 +770,15 @@ def postprocess(tex_path, new_title):
     title_match = title_pattern.search(text_content)
     if title_match:
         # 替换为新标题，保持IEEE格式（简单版本，不包含脚注）
-        text_content = title_pattern.sub(f'\\title{{{new_title}}}', text_content, count=1)
+        # 使用 r'' 原始字符串确保反斜杠不被解释
+        text_content = title_pattern.sub(r'\title{' + new_title + '}', text_content, count=1)
         print(f"[信息] 已替换 title 为: {new_title}")
     else:
         # 如果没找到 \title，尝试在 \author 前插入
         author_match = re.search(r'\\author\{', text_content)
         if author_match:
             insert_pos = author_match.start()
-            text_content = text_content[:insert_pos] + f'\\title{{{new_title}}}\n\n' + text_content[insert_pos:]
+            text_content = text_content[:insert_pos] + r'\title{' + new_title + '}\n\n' + text_content[insert_pos:]
             print(f"[信息] 已在 \\author 前插入 title: {new_title}")
         else:
             print(f"[警告] 未找到 '\\title' 或 '\\author'，无法插入标题。")
