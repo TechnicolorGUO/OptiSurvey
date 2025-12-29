@@ -751,7 +751,7 @@ def insert_figures(png_path, tex_path, json_path, ref_names, survey_title, new_t
 def postprocess(tex_path, new_title):
     """
     读取给定的 TeX 文件 (tex_path):
-      1) 对于IEEE模板，替换 \title{...} 中的标题文字，但保持IEEE格式（去掉脚注等）。
+      1) 对于IEEE模板，替换 \title{...} 中的标题文字。
       2) 将所有形如 "\[1\]"、"\[1]"、以及 "\[12\]" 等引用标记，
          以及 "[1\]" 之类的混合形式，全都去掉反斜杠，统一替换为 [1]、[12]。
       3) 将所有由 \[ \] 包裹的数学公式都替换为 \begin{dmath} \end{dmath}。
@@ -762,42 +762,15 @@ def postprocess(tex_path, new_title):
     with open(tex_path, 'r', encoding='utf-8') as f:
         text_content = f.read()
 
-    # 2) 手动解析并替换 \title{...} 中的内容
-    # 使用括号计数法来正确匹配嵌套的大括号
-    def replace_title(text, new_title_text):
-        """正确处理嵌套大括号的标题替换"""
-        title_start = text.find(r'\title{')
-        if title_start == -1:
-            return text, False
-        
-        # 从 \title{ 后开始计数括号
-        brace_start = title_start + len(r'\title{')
-        brace_count = 1
-        i = brace_start
-        
-        while i < len(text) and brace_count > 0:
-            if text[i] == '{' and (i == 0 or text[i-1] != '\\'):
-                brace_count += 1
-            elif text[i] == '}' and (i == 0 or text[i-1] != '\\'):
-                brace_count -= 1
-            i += 1
-        
-        if brace_count == 0:
-            # 找到了完整的 \title{...}
-            title_end = i
-            # 替换为新标题
-            new_text = (
-                text[:title_start] + 
-                f'\\title{{{new_title_text}}}' +
-                text[title_end:]
-            )
-            return new_text, True
-        else:
-            return text, False
+    # 2) 替换 \title{...} 中的内容
+    # 匹配 \title{...} (可能跨行，可能包含\\等)
+    title_pattern = re.compile(r'\\title\{[^}]*(?:\{[^}]*\}[^}]*)*\}', re.DOTALL)
     
-    text_content, title_replaced = replace_title(text_content, new_title)
-    
-    if title_replaced:
+    # 检查是否找到title
+    title_match = title_pattern.search(text_content)
+    if title_match:
+        # 替换为新标题，保持IEEE格式（简单版本，不包含脚注）
+        text_content = title_pattern.sub(f'\\title{{{new_title}}}', text_content, count=1)
         print(f"[信息] 已替换 title 为: {new_title}")
     else:
         # 如果没找到 \title，尝试在 \author 前插入
