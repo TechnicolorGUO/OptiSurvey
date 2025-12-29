@@ -751,35 +751,36 @@ def insert_figures(png_path, tex_path, json_path, ref_names, survey_title, new_t
 def postprocess(tex_path, new_title):
     """
     读取给定的 TeX 文件 (tex_path):
-      1) 在第一处 \author 行的上一行插入 \title{new_title}。
+      1) 对于IEEE模板，替换 \title{...} 中的标题文字。
       2) 将所有形如 "\[1\]"、"\[1]"、以及 "\[12\]" 等引用标记，
          以及 "[1\]" 之类的混合形式，全都去掉反斜杠，统一替换为 [1]、[12]。
       3) 将所有由 \[ \] 包裹的数学公式都替换为 \begin{dmath} \end{dmath}。
     最后将结果覆盖写回原始文件，并返回 tex_path。
     """
     new_title = 'A Survey of ' + new_title
-    # 1) 读取文件行
+    # 1) 读取文件内容
     with open(tex_path, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
+        text_content = f.read()
 
-    # 2) 找到包含 "\author" 的行，在其上一行插入 \title{...}
-    inserted = False
-    for i, line in enumerate(lines):
-        # 如果这一行以 \author 开头，或包含 \author{...} 等
-        if line.strip().startswith(r'\author'):
-            # 在它前面插入一行 \title{new_title}
-            lines.insert(i, f'\\title{{{new_title}}}\n')
-            inserted = True
-            break
-
-    if not inserted:
-        # 若整份文件都没有 \author{...}，可以选择直接在文档末尾插入，或在开头插入，视需求而定
-        print(f"[警告] 未找到 '\\author' 行，未能插入 '\\title{{{new_title}}}'。")
-        # 下面演示直接在文档末尾插入（可按自己需求改放开头等）
-        lines.append(f'\\title{{{new_title}}}\n')
-
-    # 将行列表合并为一个整体字符串，便于进行正则替换
-    text_joined = ''.join(lines)
+    # 2) 替换 \title{...} 中的内容
+    # 匹配 \title{...} (可能跨行，可能包含\\等)
+    title_pattern = re.compile(r'\\title\{[^}]*(?:\{[^}]*\}[^}]*)*\}', re.DOTALL)
+    
+    # 检查是否找到title
+    title_match = title_pattern.search(text_content)
+    if title_match:
+        # 替换为新标题，保持IEEE格式（简单版本，不包含脚注）
+        text_content = title_pattern.sub(f'\\title{{{new_title}}}', text_content, count=1)
+        print(f"[信息] 已替换 title 为: {new_title}")
+    else:
+        # 如果没找到 \title，尝试在 \author 前插入
+        author_match = re.search(r'\\author\{', text_content)
+        if author_match:
+            insert_pos = author_match.start()
+            text_content = text_content[:insert_pos] + f'\\title{{{new_title}}}\n\n' + text_content[insert_pos:]
+            print(f"[信息] 已在 \\author 前插入 title: {new_title}")
+        else:
+            print(f"[警告] 未找到 '\\title' 或 '\\author'，无法插入标题。")
 
     # 3) 将形如 "\[1\]"、"\[12]"、"[12\]" 等都换成 "[1]"、"[12]" 等
     #    核心正则：'(?:\\)?\[(\d+)(?:\\)?\]'
@@ -789,7 +790,7 @@ def postprocess(tex_path, new_title):
     #      (?:\\)? ---- 可选的一个反斜杠
     #      \]      ---- 匹配方括号的结尾 ']'
     ref_pattern = re.compile(r'(?:\\)?\[(\d+)(?:\\)?\]')
-    text_processed = ref_pattern.sub(r'[\1]', text_joined)
+    text_processed = ref_pattern.sub(r'[\1]', text_content)
 
     # 4) 将所有由 \[ \] 包裹的数学公式替换为 \begin{dmath} \end{dmath}
     #    正则示例: 匹配 \[ ... \] 中间任意内容 (非贪婪)
@@ -801,7 +802,7 @@ def postprocess(tex_path, new_title):
     with open(tex_path, 'w', encoding='utf-8') as f:
         f.write(text_processed)
 
-    print(f"[完成] 已在 '{tex_path}' 中插入/追加 \\title{{{new_title}}}，替换引用标记并将公式转为 dmath 格式。")
+    print(f"[完成] 已在 '{tex_path}' 中更新 \\title{{{new_title}}}，替换引用标记并将公式转为 dmath 格式。")
     return tex_path
 
 def md_to_tex_to_pdf(md_path, tex_path, pdf_path, png_path, json_path, ref_names, survey_title):
