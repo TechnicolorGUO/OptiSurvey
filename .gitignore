@@ -9,6 +9,7 @@ logs
 examples
 surveys
 .env
+test_scripts
 
 src/demo/survey_generation_pipeline/info
 src/demo/survey_generation_pipeline/txt

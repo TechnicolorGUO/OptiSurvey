@@ -503,6 +503,27 @@ FONTS & ICONS
 							<!-- Topic Input (记得添加name属性，便于后端获取) -->
 							<input type="text" class="form-control" name="topic" placeholder="Predictive Modeling on Imbalanced Data" id="topic_input_box">
 							<br>
+
+							<!-- Data Source Selection -->
+							<div class="row" style="margin-bottom: 15px;">
+								<div class="col-md-6">
+									<label for="data-source-select">Data Source:</label>
+									<select id="data-source-select" class="form-control" onchange="toggleSourceOptions()">
+										<option value="arxiv">arXiv (Online)</option>
+										<option value="local">Local PDF Database</option>
+										<option value="json_vec">JSON Vector DB (Title Embedding)</option>
+									</select>
+								</div>
+								<div class="col-md-6" id="local-db-path-container" style="display: none;">
+									<label for="local-db-path">Local Database Path:</label>
+									<input type="text" id="local-db-path" class="form-control" placeholder="E:\\Papers\\Optical_Research">
+								</div>
+								<div class="col-md-6" id="json-folder-container" style="display: none;">
+									<label for="json-folder-path">JSON Folder Path:</label>
+									<input type="text" id="json-folder-path" class="form-control" value="src/static/local_pdfs">
+								</div>
+							</div>
+
 							<!-- Recommendation Section -->
 							<div id = "recommendation-container" class="recommendation-container" style = "display: none;">
 								<div id="recommendation-list" class="recommendation-list">
@@ -626,13 +647,58 @@ FONTS & ICONS
 
 			let pdfLinks = [];
 			let pdfTitles = [];
-			// Function to fetch recommendations from Arxiv API
+			let pdfSources = []; // Track the source of each PDF (arxiv or local)
+
+			// Toggle source-specific options visibility
+			function toggleSourceOptions() {
+				const sourceSelect = document.getElementById("data-source-select");
+				const localDbPathContainer = document.getElementById("local-db-path-container");
+				const jsonFolderContainer = document.getElementById("json-folder-container");
+
+				// Hide all first
+				localDbPathContainer.style.display = "none";
+				jsonFolderContainer.style.display = "none";
+
+				// Show based on selection
+				if (sourceSelect.value === "local") {
+					localDbPathContainer.style.display = "block";
+				} else if (sourceSelect.value === "json_vec") {
+					jsonFolderContainer.style.display = "block";
+				}
+			}
+
+			// Function to fetch recommendations from Arxiv API or Local Database
 			async function fetchRecommendations() {
 				pdfLinks = [];
+				pdfTitles = [];
+				pdfSources = [];
 				const topic = document.getElementById("topic_input_box").value.trim();
 				if (!topic) {
 					alert("Please enter a topic!");
 					return;
+				}
+
+				// Get data source
+				const sourceSelect = document.getElementById("data-source-select");
+				const selectedSource = sourceSelect.value;
+				let localDbPath = "";
+				let jsonFolder = "";
+
+				// If local source is selected, validate path
+				if (selectedSource === "local") {
+					localDbPath = document.getElementById("local-db-path").value.trim();
+					if (!localDbPath) {
+						alert("Please enter the local database path!");
+						return;
+					}
+				}
+
+				// If json_vec source is selected, get folder path
+				if (selectedSource === "json_vec") {
+					jsonFolder = document.getElementById("json-folder-path").value.trim();
+					if (!jsonFolder) {
+						jsonFolder = "src/static/local_pdfs"; // default
+					}
 				}
 
 				// Clear previous results
@@ -643,13 +709,25 @@ FONTS & ICONS
 				recommendationList.innerHTML = `<p>Loading recommendations...</p>`;
 
 				try {
+					// Prepare request body
+					const requestBody = { topic: topic };
+					if (selectedSource === "local") {
+						requestBody.source = "local";
+						requestBody.local_db_path = localDbPath;
+					} else if (selectedSource === "json_vec") {
+						requestBody.source = "json_vec";
+						requestBody.json_folder = jsonFolder;
+					} else {
+						requestBody.source = "arxiv";
+					}
+
 					// Step 1: Send topic to backend
 					const backendResponse = await fetch('/generate_arxiv_query/', {
 						method: 'POST',
 						headers: {
 							'Content-Type': 'application/json',
 						},
-						body: JSON.stringify({ topic: topic }),
+						body: JSON.stringify(requestBody),
 					});
 
 					if (!backendResponse.ok) {
@@ -675,13 +753,23 @@ FONTS & ICONS
 
 					// 将后端返回的各 paper 渲染到页面
 					for (let i = 0; i < papers.length; i++) {
-						const { title, summary, pdf_link, arxiv_id } = papers[i];
+						const { title, summary, pdf_link, arxiv_id, source: paperSource } = papers[i];
 
 						const recommendationItem = document.createElement("div");
 						recommendationItem.className = "recommendation-item";
 
+						// 显示来源标签
+						let sourceLabel;
+						if (paperSource === 'local') {
+							sourceLabel = '<span style="color: green; font-size: 12px;">[Local]</span>';
+						} else if (paperSource === 'json_vec') {
+							sourceLabel = '<span style="color: purple; font-size: 12px;">[JSON-Vec]</span>';
+						} else {
+							sourceLabel = '<span style="color: blue; font-size: 12px;">[arXiv]</span>';
+						}
+
 						recommendationItem.innerHTML = `
-							<h4>${title}</h4>
+							<h4>${title} ${sourceLabel}</h4>
 							<p>${(summary || '').substring(0, 150)}...</p>
 							<a href="#" onclick="downloadPDF('${arxiv_id}')">Download PDF</a>
 						`;
@@ -691,6 +779,7 @@ FONTS & ICONS
 						// 同时将链接推入 pdfLinks
 						pdfLinks.push(pdf_link);
 						pdfTitles.push(title);
+						pdfSources.push(paperSource || selectedSource);
 					}
 				} catch (error) {
 					console.error("Error fetching recommendations:", error);
@@ -712,13 +801,39 @@ FONTS & ICONS
 				// 显示进度条和状态（与上传一致）
 				showUploadProgress();
 
+				// 获取当前数据源和配置
+				const sourceSelect = document.getElementById("data-source-select");
+				const selectedSource = sourceSelect.value;
+				let localDbPath = "";
+				let jsonFolder = "";
+				if (selectedSource === "local") {
+					localDbPath = document.getElementById("local-db-path").value.trim();
+				} else if (selectedSource === "json_vec") {
+					jsonFolder = document.getElementById("json-folder-path").value.trim() || "src/static/local_pdfs";
+				}
+
 				try {
+					const requestBody = {
+						pdf_links: pdfLinks,
+						pdf_titles: pdfTitles,
+						sources: pdfSources
+					};
+
+					// 如果包含本地文件，传递本地数据库路径
+					if (pdfSources.includes('local') && localDbPath) {
+						requestBody.local_db_path = localDbPath;
+					}
+					// 如果包含 json_vec 文件，传递 json 文件夹路径
+					if (pdfSources.includes('json_vec') && jsonFolder) {
+						requestBody.json_folder = jsonFolder;
+					}
+
 					const response = await fetch('/download_pdfs/', {
 						method: 'POST',
 						headers: {
 							'Content-Type': 'application/json',
 						},
-						body: JSON.stringify({ pdf_links: pdfLinks, pdf_titles: pdfTitles })
+						body: JSON.stringify(requestBody)
 					});
 
 					if (!response.ok) {

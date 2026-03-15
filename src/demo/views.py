@@ -51,6 +51,7 @@ from .asg_query import generate_generic_query_qwen, generate_query_qwen
 from .asg_add_flowchart import insert_ref_images, detect_flowcharts
 from .asg_mindmap import generate_graphviz_png, insert_outline_image
 from .asg_latex import tex_to_pdf, insert_figures, md_to_tex, preprocess_md
+from .local_pdf_db import search_local_pdfs, scan_local_pdf_database, get_local_pdf_path, set_local_db_path
 # from .survey_generator_api import ensure_all_papers_cited
 import glob
 
@@ -814,21 +815,33 @@ def upload_refs_sync(request):
 
 @csrf_exempt
 def generate_arxiv_query(request):
+    """
+    搜索论文的API端点
+
+    支持两种数据源：
+    1. arxiv - 从arXiv API搜索论文（默认）
+    2. local - 从本地PDF数据库搜索
+
+    请求参数：
+    - topic: 搜索主题（必需）
+    - source: 数据源，可选 "arxiv" 或 "local"（默认 "arxiv"）
+    - local_db_path: 本地PDF数据库根文件夹路径（source="local"时必需）
+    """
     def search_arxiv_with_query(query, max_results=50):
         encoded_query = urllib.parse.quote_plus(query)
         url = f"https://export.arxiv.org/api/query?search_query={encoded_query}&start=0&max_results={max_results}&sortBy=submittedDate"
-        
+
         response = requests.get(url)
         if response.status_code != 200:
             print(f"Error fetching data with query: {query} | status code: {response.status_code}")
             return []
-        
+
         try:
             root = ET.fromstring(response.text)
         except Exception as e:
             print("Error parsing XML:", e)
             return []
-        
+
         ns = "{http://www.w3.org/2005/Atom}"
         entries = root.findall(f"{ns}entry")
         papers = []
@@ -846,18 +859,122 @@ def generate_arxiv_query(request):
                 "title": title,
                 "summary": summary_text,
                 "pdf_link": pdf_link,
-                "arxiv_id": arxiv_id
+                "arxiv_id": arxiv_id,
+                "source": "arxiv"
             })
-        
+
         return papers
+
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             topic = data.get('topic', '').strip()
             if not topic:
                 return JsonResponse({'error': 'Topic is required.'}, status=400)
+
+            # 获取数据源参数
+            source = data.get('source', 'arxiv').lower().strip()
+            local_db_path = data.get('local_db_path', '').strip()
+
             max_results = 50
             min_results = 10
+
+            # 本地数据库模式
+            if source == 'local':
+                if not local_db_path:
+                    return JsonResponse({
+                        'error': 'Local database path is required when source is "local".',
+                        'hint': 'Please provide local_db_path in the request body.'
+                    }, status=400)
+
+                if not os.path.exists(local_db_path):
+                    return JsonResponse({
+                        'error': f'Local database path does not exist: {local_db_path}'
+                    }, status=400)
+
+                # 扫描本地PDF数据库
+                print(f"[Local DB] Scanning local PDF database: {local_db_path}")
+                local_papers = search_local_pdfs(topic, local_db_path, max_results=max_results)
+
+                if len(local_papers) < min_results:
+                    return JsonResponse({
+                        'error': f'Not enough papers found in local database. Found {len(local_papers)}, need at least {min_results}.',
+                        'count': len(local_papers),
+                    }, status=400)
+
+                return JsonResponse({
+                    "papers": local_papers,
+                    "count": len(local_papers),
+                    "source": "local",
+                    "local_db_path": local_db_path
+                }, status=200)
+
+            # JSON Vector Database 模式（基于标题 embedding 的向量检索）
+            if source == 'json_vec':
+                json_folder = data.get('json_folder', 'src/static/local_pdfs').strip()
+
+                if not os.path.exists(json_folder):
+                    return JsonResponse({
+                        'error': f'JSON folder does not exist: {json_folder}'
+                    }, status=400)
+
+                try:
+                    print(f"[JSON Vector DB] Searching for: {topic}")
+
+                    # 获取或创建数据库实例
+                    from .json_vector_db import get_db_instance
+                    db = get_db_instance(json_folder)
+
+                    # 如果索引未构建，则构建
+                    if db.index is None:
+                        print("[JSON Vector DB] Building index...")
+                        success = db.build_index()
+                        if not success:
+                            return JsonResponse({
+                                'error': 'Failed to build JSON vector database index.',
+                                'hint': 'Check if JSON files exist in the specified folder.'
+                            }, status=500)
+
+                    # 执行向量搜索
+                    results = db.search(topic, k=max_results)
+
+                    if len(results) < min_results:
+                        return JsonResponse({
+                            'error': f'Not enough papers found in JSON database. Found {len(results)}, need at least {min_results}.',
+                            'count': len(results),
+                        }, status=400)
+
+                    # 转换为与 arxiv/local 兼容的格式
+                    # pdf_link 指向本地 PDF 路径，下载时会复制文件
+                    papers = []
+                    for r in results:
+                        papers.append({
+                            "title": r["title"],
+                            "summary": f"Similarity: {r['score']:.4f} | From: {r['json_source']}",
+                            "pdf_link": r["pdf_path"],  # 本地 PDF 路径
+                            "arxiv_id": r["paper_id"],
+                            "source": "json_vec",
+                            "score": r["score"],
+                            "json_source": r["json_source"]
+                        })
+
+                    return JsonResponse({
+                        "papers": papers,
+                        "count": len(papers),
+                        "source": "json_vec",
+                        "json_folder": json_folder
+                    }, status=200)
+
+                except Exception as e:
+                    import traceback
+                    print(f"Error in JSON vector search: {e}")
+                    traceback.print_exc()
+                    return JsonResponse({
+                        'error': f'JSON vector search failed: {str(e)}',
+                        'hint': 'Make sure sentence-transformers and faiss are installed.'
+                    }, status=500)
+
+            # arXiv模式（默认）
             strict_query = generate_query_qwen(topic)
             papers_strict = search_arxiv_with_query(strict_query, max_results=max_results)
 
@@ -867,13 +984,14 @@ def generate_arxiv_query(request):
                 papers_list = list(total_papers.values())  # dict -> list
 
                 return JsonResponse({
-                    "papers": papers_list,  # 例如 [{"title": "...", "summary": "...", "pdf_link": "...", "arxiv_id": "..."}]
+                    "papers": papers_list,
                     "count": len(papers_list),
+                    "source": "arxiv"
                 }, status=200)
 
             attempts = 0
             MAX_ATTEMPTS = 5
-            current_query = strict_query  # 方便追踪当前 query
+            current_query = strict_query
 
             while len(total_papers) < min_results and attempts < MAX_ATTEMPTS:
                 # 生成更宽松的查询
@@ -888,15 +1006,15 @@ def generate_arxiv_query(request):
                         new_count += 1
 
                 attempts += 1
-                current_query = generic_query  # 将本轮的宽松查询作为"新的严格查询"
+                current_query = generic_query
 
                 if len(total_papers) >= min_results:
-                    # 一旦达到 min_results，就返回此时的查询
-                    papers_list = list(total_papers.values())  # dict -> list
+                    papers_list = list(total_papers.values())
 
                     return JsonResponse({
-                        "papers": papers_list,  # 例如 [{"title": "...", "summary": "...", "pdf_link": "...", "arxiv_id": "..."}]
+                        "papers": papers_list,
                         "count": len(papers_list),
+                        "source": "arxiv"
                     }, status=200)
 
             return JsonResponse({
@@ -905,6 +1023,9 @@ def generate_arxiv_query(request):
             }, status=400)
 
         except Exception as e:
+            import traceback
+            print(f"Error in generate_arxiv_query: {e}")
+            traceback.print_exc()
             return JsonResponse({'error': str(e)}, status=500)
 
     return JsonResponse({'error': 'Invalid request method.'}, status=405)
@@ -944,47 +1065,109 @@ def download_pdfs_sync(request):
             
             for i, pdf_url in enumerate(pdf_links):
                 try:
-                    print(f"Downloading {i+1}/{len(pdf_links)}: {pdf_url}")
+                    print(f"Processing {i+1}/{len(pdf_links)}: {pdf_url}")
                     progress = 10 + (i / len(pdf_links)) * 80
-                    update_progress(operation_id, progress, f"Downloading PDF {i+1}/{len(pdf_links)}")
-                    
-                    # 设置超时时间：连接超时10秒，读取超时60秒
-                    response = requests.get(
-                        pdf_url, 
-                        stream=True, 
-                        timeout=(10, 60),
-                        headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-                    )
-                    
-                    if response.status_code == 200:
-                        # 处理文件名，确保合法
-                        sanitized_title = clean_filename(pdf_titles[i]) if i < len(pdf_titles) else f"file_{i}"
-                        pdf_filename = os.path.join(base_dir, f"{sanitized_title}.pdf")
+                    update_progress(operation_id, progress, f"Processing PDF {i+1}/{len(pdf_links)}")
 
-                        # 下载 PDF，添加文件大小检查
-                        total_size = 0
-                        max_size = 50 * 1024 * 1024  # 50MB 限制
-                        
-                        with open(pdf_filename, "wb") as pdf_file:
-                            for chunk in response.iter_content(chunk_size=8192):
-                                if chunk:
-                                    total_size += len(chunk)
-                                    if total_size > max_size:
-                                        print(f"File too large, skipping: {pdf_url}")
-                                        failed_downloads.append({"url": pdf_url, "reason": "File too large (>50MB)"})
-                                        break
-                                    pdf_file.write(chunk)
-                        
-                        if total_size <= max_size:
+                    # 处理文件名，确保合法
+                    sanitized_title = clean_filename(pdf_titles[i]) if i < len(pdf_titles) else f"file_{i}"
+                    pdf_filename = os.path.join(base_dir, f"{sanitized_title}.pdf")
+
+                    # 检查是否是本地文件路径
+                    is_local_file = pdf_url.startswith("local_") or os.path.isfile(pdf_url) or (
+                        len(pdf_url) > 3 and pdf_url[1:3] == ":\\"  # Windows 路径如 "C:\..."
+                    )
+
+                    if is_local_file or os.path.exists(pdf_url):
+                        # 本地文件模式：复制文件
+                        source_path = pdf_url
+
+                        # 如果 pdf_url 是本地 ID 格式 (local_xxxxx)，需要查找实际路径
+                        if pdf_url.startswith("local_"):
+                            # 从请求中获取本地数据库路径（通过 sources 数组）
+                            sources = data.get("sources", [])
+                            local_db_path = ""
+                            for j, src in enumerate(sources):
+                                if j == i and src == "local":
+                                    # 尝试从 local_db_path 参数获取
+                                    local_db_path = data.get("local_db_path", "")
+                                    break
+
+                            # 尝试查找文件
+                            if local_db_path:
+                                source_path = get_local_pdf_path(pdf_url, local_db_path) or pdf_url
+
+                        # 如果 pdf_url 是 json_vec 的 ID 格式 (json_xxxxx)
+                        elif pdf_url.startswith("json_"):
+                            sources = data.get("sources", [])
+                            json_folder = ""
+                            for j, src in enumerate(sources):
+                                if j == i and src == "json_vec":
+                                    json_folder = data.get("json_folder", "src/static/local_pdfs")
+                                    break
+
+                            # 从 JSON Vector DB 查找实际路径
+                            if json_folder:
+                                from .json_vector_db import get_db_instance
+                                db = get_db_instance(json_folder)
+                                paper_info = db.get_paper_by_id(pdf_url)
+                                if paper_info:
+                                    source_path = paper_info["pdf_path"]
+                                else:
+                                    source_path = pdf_url
+
+                        # 处理相对路径（对于 json_vec 返回的相对路径）
+                        if not os.path.isabs(source_path) and not os.path.exists(source_path):
+                            # 可能是相对于 json_folder 的路径
+                            json_folder = data.get("json_folder", "src/static/local_pdfs")
+                            potential_path = os.path.join(json_folder, source_path)
+                            if os.path.exists(potential_path):
+                                source_path = potential_path
+
+                        if os.path.exists(source_path):
+                            # 复制本地文件
+                            import shutil
+                            shutil.copy2(source_path, pdf_filename)
+                            file_size = os.path.getsize(pdf_filename)
                             downloaded_files.append(pdf_filename)
-                            print(f"Success: {pdf_filename} ({total_size/1024/1024:.2f}MB)")
+                            print(f"Success (local copy): {pdf_filename} ({file_size/1024/1024:.2f}MB)")
                         else:
-                            # 删除部分下载的文件
-                            if os.path.exists(pdf_filename):
-                                os.remove(pdf_filename)
+                            print(f"Local file not found: {source_path}")
+                            failed_downloads.append({"url": pdf_url, "reason": "Local file not found"})
                     else:
-                        print(f"Failed to download {pdf_url}, status code: {response.status_code}")
-                        failed_downloads.append({"url": pdf_url, "reason": f"HTTP {response.status_code}"})
+                        # 远程下载模式
+                        response = requests.get(
+                            pdf_url,
+                            stream=True,
+                            timeout=(10, 60),
+                            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+                        )
+
+                        if response.status_code == 200:
+                            # 下载 PDF，添加文件大小检查
+                            total_size = 0
+                            max_size = 50 * 1024 * 1024  # 50MB 限制
+
+                            with open(pdf_filename, "wb") as pdf_file:
+                                for chunk in response.iter_content(chunk_size=8192):
+                                    if chunk:
+                                        total_size += len(chunk)
+                                        if total_size > max_size:
+                                            print(f"File too large, skipping: {pdf_url}")
+                                            failed_downloads.append({"url": pdf_url, "reason": "File too large (>50MB)"})
+                                            break
+                                        pdf_file.write(chunk)
+
+                            if total_size <= max_size:
+                                downloaded_files.append(pdf_filename)
+                                print(f"Success (download): {pdf_filename} ({total_size/1024/1024:.2f}MB)")
+                            else:
+                                # 删除部分下载的文件
+                                if os.path.exists(pdf_filename):
+                                    os.remove(pdf_filename)
+                        else:
+                            print(f"Failed to download {pdf_url}, status code: {response.status_code}")
+                            failed_downloads.append({"url": pdf_url, "reason": f"HTTP {response.status_code}"})
 
                 except requests.exceptions.Timeout:
                     print(f"Timeout downloading {pdf_url}")
@@ -993,7 +1176,7 @@ def download_pdfs_sync(request):
                     print(f"Connection error downloading {pdf_url}")
                     failed_downloads.append({"url": pdf_url, "reason": "Connection error"})
                 except Exception as e:
-                    print(f"Error downloading {pdf_url}: {e}")
+                    print(f"Error processing {pdf_url}: {e}")
                     failed_downloads.append({"url": pdf_url, "reason": str(e)})
 
             print(f"Download finished: {len(downloaded_files)} successful, {len(failed_downloads)} failed")
