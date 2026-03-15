@@ -510,18 +510,12 @@ FONTS & ICONS
 									<label for="data-source-select">Data Source:</label>
 									<select id="data-source-select" class="form-control" onchange="toggleSourceOptions()">
 										<option value="arxiv">arXiv (Online)</option>
-										<option value="local">Local PDF Database</option>
+										<option value="hybrid">Hybrid (arXiv + Vector DB)</option>
 										<option value="json_vec">JSON Vector DB (Title Embedding)</option>
 									</select>
 								</div>
-								<div class="col-md-6" id="local-db-path-container" style="display: none;">
-									<label for="local-db-path">Local Database Path:</label>
-									<input type="text" id="local-db-path" class="form-control" placeholder="E:\\Papers\\Optical_Research">
-								</div>
-								<div class="col-md-6" id="json-folder-container" style="display: none;">
-									<label for="json-folder-path">JSON Folder Path:</label>
-									<input type="text" id="json-folder-path" class="form-control" value="src/static/local_pdfs">
-								</div>
+<!-- JSON Vector DB 路径隐藏，后端固定为 src/static/local_pdfs -->
+								<input type="hidden" id="json-folder-path" value="src/static/local_pdfs">
 							</div>
 
 							<!-- Recommendation Section -->
@@ -651,20 +645,8 @@ FONTS & ICONS
 
 			// Toggle source-specific options visibility
 			function toggleSourceOptions() {
-				const sourceSelect = document.getElementById("data-source-select");
-				const localDbPathContainer = document.getElementById("local-db-path-container");
-				const jsonFolderContainer = document.getElementById("json-folder-container");
-
-				// Hide all first
-				localDbPathContainer.style.display = "none";
-				jsonFolderContainer.style.display = "none";
-
-				// Show based on selection
-				if (sourceSelect.value === "local") {
-					localDbPathContainer.style.display = "block";
-				} else if (sourceSelect.value === "json_vec") {
-					jsonFolderContainer.style.display = "block";
-				}
+				// 所有模式都不需要额外输入框
+				// hybrid 和 arxiv 直接使用，json_vec 使用后端固定路径
 			}
 
 			// Function to fetch recommendations from Arxiv API or Local Database
@@ -681,25 +663,6 @@ FONTS & ICONS
 				// Get data source
 				const sourceSelect = document.getElementById("data-source-select");
 				const selectedSource = sourceSelect.value;
-				let localDbPath = "";
-				let jsonFolder = "";
-
-				// If local source is selected, validate path
-				if (selectedSource === "local") {
-					localDbPath = document.getElementById("local-db-path").value.trim();
-					if (!localDbPath) {
-						alert("Please enter the local database path!");
-						return;
-					}
-				}
-
-				// If json_vec source is selected, get folder path
-				if (selectedSource === "json_vec") {
-					jsonFolder = document.getElementById("json-folder-path").value.trim();
-					if (!jsonFolder) {
-						jsonFolder = "src/static/local_pdfs"; // default
-					}
-				}
 
 				// Clear previous results
 				const recommendationContainer = document.getElementById("recommendation-container");
@@ -710,16 +673,7 @@ FONTS & ICONS
 
 				try {
 					// Prepare request body
-					const requestBody = { topic: topic };
-					if (selectedSource === "local") {
-						requestBody.source = "local";
-						requestBody.local_db_path = localDbPath;
-					} else if (selectedSource === "json_vec") {
-						requestBody.source = "json_vec";
-						requestBody.json_folder = jsonFolder;
-					} else {
-						requestBody.source = "arxiv";
-					}
+					const requestBody = { topic: topic, source: selectedSource };
 
 					// Step 1: Send topic to backend
 					const backendResponse = await fetch('/generate_arxiv_query/', {
@@ -760,8 +714,8 @@ FONTS & ICONS
 
 						// 显示来源标签
 						let sourceLabel;
-						if (paperSource === 'local') {
-							sourceLabel = '<span style="color: green; font-size: 12px;">[Local]</span>';
+						if (paperSource === 'hybrid') {
+							sourceLabel = '<span style="color: orange; font-size: 12px;">[Hybrid]</span>';
 						} else if (paperSource === 'json_vec') {
 							sourceLabel = '<span style="color: purple; font-size: 12px;">[JSON-Vec]</span>';
 						} else {
@@ -801,16 +755,7 @@ FONTS & ICONS
 				// 显示进度条和状态（与上传一致）
 				showUploadProgress();
 
-				// 获取当前数据源和配置
-				const sourceSelect = document.getElementById("data-source-select");
-				const selectedSource = sourceSelect.value;
-				let localDbPath = "";
-				let jsonFolder = "";
-				if (selectedSource === "local") {
-					localDbPath = document.getElementById("local-db-path").value.trim();
-				} else if (selectedSource === "json_vec") {
-					jsonFolder = document.getElementById("json-folder-path").value.trim() || "src/static/local_pdfs";
-				}
+				// 所有数据源都使用统一的上传逻辑，后端自动处理
 
 				try {
 					const requestBody = {
@@ -818,15 +763,7 @@ FONTS & ICONS
 						pdf_titles: pdfTitles,
 						sources: pdfSources
 					};
-
-					// 如果包含本地文件，传递本地数据库路径
-					if (pdfSources.includes('local') && localDbPath) {
-						requestBody.local_db_path = localDbPath;
-					}
-					// 如果包含 json_vec 文件，传递 json 文件夹路径
-					if (pdfSources.includes('json_vec') && jsonFolder) {
-						requestBody.json_folder = jsonFolder;
-					}
+					// 后端自动根据 pdfSources 中的 source 类型处理不同的下载/复制逻辑
 
 					const response = await fetch('/download_pdfs/', {
 						method: 'POST',

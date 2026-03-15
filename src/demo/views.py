@@ -879,37 +879,96 @@ def generate_arxiv_query(request):
             max_results = 50
             min_results = 10
 
-            # 本地数据库模式
-            if source == 'local':
-                if not local_db_path:
+            # Hybrid 模式：同时搜索 arXiv 和 JSON Vector DB，综合排序
+            if source == 'hybrid':
+                try:
+                    print(f"[Hybrid] Searching arXiv and JSON Vector DB for: {topic}")
+
+                    # 1. 搜索 JSON Vector DB
+                    from .json_vector_db import get_db_instance
+                    json_db = get_db_instance('src/static/local_pdfs')
+
+                    json_papers = []
+                    if json_db.index is None:
+                        print("[Hybrid] Building JSON Vector DB index...")
+                        json_db.build_index()
+
+                    if json_db.index is not None:
+                        json_results = json_db.search(topic, k=max_results)
+                        for r in json_results:
+                            json_papers.append({
+                                "title": r["title"],
+                                "summary": f"Similarity: {r['score']:.4f} | From: {r['json_source']}",
+                                "pdf_link": r["pdf_path"],
+                                "arxiv_id": r["paper_id"],
+                                "source": "json_vec",
+                                "score": r["score"],
+                                "json_source": r["json_source"],
+                                "hybrid_score": r["score"] * 0.5 + 0.5  # 将 0-1 分数映射到 0.5-1.0
+                            })
+                        print(f"[Hybrid] Found {len(json_papers)} papers from JSON Vector DB")
+
+                    # 2. 搜索 arXiv
+                    strict_query = generate_query_qwen(topic)
+                    arxiv_papers = search_arxiv_with_query(strict_query, max_results=max_results)
+
+                    # 为 arXiv 论文添加 hybrid_score（按排名递减）
+                    for i, paper in enumerate(arxiv_papers):
+                        # 前10名得 1.0，之后线性递减到 0.5
+                        rank_score = max(0.5, 1.0 - (i / max_results) * 0.5)
+                        paper["hybrid_score"] = rank_score
+                        paper["score"] = rank_score
+
+                    print(f"[Hybrid] Found {len(arxiv_papers)} papers from arXiv")
+
+                    # 3. 合并结果（去重：相同标题优先保留 JSON Vector DB 的，因为更精准）
+                    all_papers = {}
+
+                    # 先加入 JSON Vector DB 的结果（优先）
+                    for paper in json_papers:
+                        title_key = paper["title"].lower().strip()
+                        all_papers[title_key] = paper
+
+                    # 再加入 arXiv 的结果（如果标题不重复）
+                    for paper in arxiv_papers:
+                        title_key = paper["title"].lower().strip()
+                        if title_key not in all_papers:
+                            all_papers[title_key] = paper
+
+                    # 4. 按 hybrid_score 排序
+                    merged_papers = sorted(all_papers.values(), key=lambda x: x.get("hybrid_score", 0), reverse=True)
+
+                    # 5. 取前 max_results 个
+                    final_papers = merged_papers[:max_results]
+
+                    if len(final_papers) < min_results:
+                        return JsonResponse({
+                            'error': f'Not enough papers found. Found {len(final_papers)}, need at least {min_results}.',
+                            'count': len(final_papers),
+                        }, status=400)
+
+                    print(f"[Hybrid] Total unique papers: {len(final_papers)} (JSON: {len(json_papers)}, arXiv: {len(arxiv_papers)})")
+
                     return JsonResponse({
-                        'error': 'Local database path is required when source is "local".',
-                        'hint': 'Please provide local_db_path in the request body.'
-                    }, status=400)
+                        "papers": final_papers,
+                        "count": len(final_papers),
+                        "source": "hybrid",
+                        "breakdown": {
+                            "json_vec": len(json_papers),
+                            "arxiv": len(arxiv_papers),
+                            "unique": len(final_papers)
+                        }
+                    }, status=200)
 
-                if not os.path.exists(local_db_path):
+                except Exception as e:
+                    import traceback
+                    print(f"Error in hybrid search: {e}")
+                    traceback.print_exc()
                     return JsonResponse({
-                        'error': f'Local database path does not exist: {local_db_path}'
-                    }, status=400)
+                        'error': f'Hybrid search failed: {str(e)}',
+                    }, status=500)
 
-                # 扫描本地PDF数据库
-                print(f"[Local DB] Scanning local PDF database: {local_db_path}")
-                local_papers = search_local_pdfs(topic, local_db_path, max_results=max_results)
-
-                if len(local_papers) < min_results:
-                    return JsonResponse({
-                        'error': f'Not enough papers found in local database. Found {len(local_papers)}, need at least {min_results}.',
-                        'count': len(local_papers),
-                    }, status=400)
-
-                return JsonResponse({
-                    "papers": local_papers,
-                    "count": len(local_papers),
-                    "source": "local",
-                    "local_db_path": local_db_path
-                }, status=200)
-
-            # JSON Vector Database 模式（基于标题 embedding 的向量检索）
+            # JSON Vector Database 模式（仅本地 JSON 数据库）
             if source == 'json_vec':
                 json_folder = data.get('json_folder', 'src/static/local_pdfs').strip()
 
