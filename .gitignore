@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 
 src/static/data
+src/static/local_pdfs
 chromadb
 # resources
 logs
