@@ -20,10 +20,11 @@ class AsyncTaskManager:
         if task_id in self.running_tasks:
             return False  # 任务已在运行
         
+        self.running_tasks[task_id] = {'status': 'running', 'start_time': time.time()}
+
         def task_wrapper():
             try:
                 print(f"[DEBUG] Task {task_id} started in background thread")
-                self.running_tasks[task_id] = {'status': 'running', 'start_time': time.time()}
                 result = target_func(*args, **kwargs)
                 self.running_tasks[task_id]['status'] = 'completed'
                 self.running_tasks[task_id]['result'] = result

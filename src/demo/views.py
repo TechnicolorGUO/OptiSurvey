@@ -1198,14 +1198,12 @@ def download_pdfs_sync(request):
                             print(f"Success (local copy): {pdf_filename} ({file_size/1024/1024:.2f}MB)")
 
                             # 检查是否有预处理好的 MineRU markdown 文件夹
+                            # MineRU 输出结构: {parent}/{pdf_name}/{pdf_name}/auto/{pdf_name}.md
                             pdf_base_name = os.path.splitext(os.path.basename(source_path))[0]
                             pdf_parent_dir = os.path.dirname(source_path)
-                            pre_processed_md_dir = os.path.join(pdf_parent_dir, pdf_base_name)
+                            pre_processed_md_dir = os.path.join(pdf_parent_dir, pdf_base_name, pdf_base_name)
                             pre_processed_md_file = os.path.join(pre_processed_md_dir, "auto", f"{pdf_base_name}.md")
-                            print(f"[DEBUG] Checking pre-processed md: source_path={source_path}")
-                            print(f"[DEBUG] pdf_base_name={pdf_base_name}, pdf_parent_dir={pdf_parent_dir}")
-                            print(f"[DEBUG] pre_processed_md_dir={pre_processed_md_dir}")
-                            print(f"[DEBUG] pre_processed_md_file={pre_processed_md_file}, exists={os.path.exists(pre_processed_md_file)}")
+                            print(f"[DEBUG] Checking pre-processed md: {pre_processed_md_file}, exists={os.path.exists(pre_processed_md_file)}")
 
                             if os.path.exists(pre_processed_md_file):
                                 recommend_md_dir = os.path.join(os.getcwd(), "src", "static", "data", "pdf", "recommend_pdfs_md")
@@ -2311,6 +2309,7 @@ def generate_pdf_from_tex(request):
     """异步版本的LaTeX PDF生成接口，避免Cloudflare 524超时"""
     if request.method == 'POST':
         operation_id = f"latex_{int(time.time())}"
+        request.operation_id = operation_id
         success = task_manager.start_task(
             operation_id,
             generate_pdf_from_tex_sync,
