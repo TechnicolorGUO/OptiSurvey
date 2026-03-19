@@ -1206,11 +1206,13 @@ def download_pdfs_sync(request):
                             if os.path.exists(pre_processed_md_file):
                                 recommend_md_dir = os.path.join(os.getcwd(), "src", "static", "data", "pdf", "recommend_pdfs_md")
                                 os.makedirs(recommend_md_dir, exist_ok=True)
-                                dest_md_dir = os.path.join(recommend_md_dir, sanitized_title)
+                                # 用 sanitize_filename_py 处理目标名，和 upload_refs_sync 中的命名保持一致
+                                dest_folder_name = sanitize_filename_py(sanitized_title)
+                                dest_md_dir = os.path.join(recommend_md_dir, dest_folder_name)
                                 if os.path.exists(dest_md_dir):
                                     shutil.rmtree(dest_md_dir)
                                 shutil.copytree(pre_processed_md_dir, dest_md_dir)
-                                print(f"Copied pre-processed markdown for {pdf_base_name} -> {sanitized_title}")
+                                print(f"Copied pre-processed markdown for {pdf_base_name} -> {dest_folder_name}")
                         else:
                             print(f"Local file not found: {source_path}")
                             failed_downloads.append({"url": pdf_url, "reason": "Local file not found"})
