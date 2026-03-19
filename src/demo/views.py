@@ -1202,6 +1202,10 @@ def download_pdfs_sync(request):
                             pdf_parent_dir = os.path.dirname(source_path)
                             pre_processed_md_dir = os.path.join(pdf_parent_dir, pdf_base_name)
                             pre_processed_md_file = os.path.join(pre_processed_md_dir, "auto", f"{pdf_base_name}.md")
+                            print(f"[DEBUG] Checking pre-processed md: source_path={source_path}")
+                            print(f"[DEBUG] pdf_base_name={pdf_base_name}, pdf_parent_dir={pdf_parent_dir}")
+                            print(f"[DEBUG] pre_processed_md_dir={pre_processed_md_dir}")
+                            print(f"[DEBUG] pre_processed_md_file={pre_processed_md_file}, exists={os.path.exists(pre_processed_md_file)}")
 
                             if os.path.exists(pre_processed_md_file):
                                 recommend_md_dir = os.path.join(os.getcwd(), "src", "static", "data", "pdf", "recommend_pdfs_md")

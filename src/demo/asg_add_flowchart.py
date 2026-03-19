@@ -1,14 +1,15 @@
 import json
 import os
 import re
+import base64
 from urllib.parse import quote
 
-import os
-import json
 import torch
 import torchvision.transforms as transforms
 from torchvision import models
 from PIL import Image
+
+from .asg_generator import getQwenClient
 
 # 常量定义
 BASE_DIR = os.path.normpath("src/static/data/md")  # 根目录
@@ -30,6 +31,68 @@ transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
 ])
+
+def analyze_flowchart_with_vlm(image_path):
+    """
+    用 VLM 分析图片：确认是否是有意义的图表，并生成 caption。
+    返回 (is_chart: bool, caption: str)
+    """
+    try:
+        client = getQwenClient()
+        with open(image_path, "rb") as f:
+            b64 = base64.b64encode(f.read()).decode("utf-8")
+
+        # 根据文件扩展名确定 MIME 类型
+        ext = os.path.splitext(image_path)[1].lower()
+        mime = "image/png" if ext == ".png" else "image/jpeg"
+
+        vlm_model = os.environ.get("VLM_MODEL", os.environ.get("MODEL"))
+        response = client.chat.completions.create(
+            model=vlm_model,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:{mime};base64,{b64}"}
+                    },
+                    {
+                        "type": "text",
+                        "text": (
+                            "Is this image a meaningful chart, diagram, flowchart, or architecture figure "
+                            "from an academic paper? If YES, provide a concise one-sentence academic caption "
+                            "describing what this chart illustrates. If NO (e.g. it's a logo, decorative image, "
+                            "table, screenshot, or unreadable), just say NO.\n\n"
+                            "Respond in EXACTLY this format:\n"
+                            "IS_CHART: YES or NO\n"
+                            "CAPTION: <one-sentence caption or empty>"
+                        )
+                    }
+                ]
+            }],
+            max_tokens=256,
+            temperature=0.3,
+        )
+
+        result_text = response.choices[0].message.content.strip()
+        print(f"🤖 VLM response for {os.path.basename(image_path)}: {result_text}")
+
+        # 解析响应
+        is_chart = False
+        caption = ""
+        for line in result_text.splitlines():
+            line = line.strip()
+            if line.upper().startswith("IS_CHART:"):
+                is_chart = "YES" in line.upper()
+            elif line.upper().startswith("CAPTION:"):
+                caption = line.split(":", 1)[1].strip()
+
+        return is_chart, caption
+
+    except Exception as e:
+        print(f"⚠️ VLM analysis failed for {image_path}: {e}")
+        # VLM 失败时回退：假设分类器结果正确，使用默认 caption
+        return True, ""
 
 def detect_flowcharts(survey_id):
     """ 在指定 survey_id 目录下查找 flowchart，并保存 JSON 结果 """
@@ -68,10 +131,20 @@ def detect_flowcharts(survey_id):
                         predicted_class = torch.argmax(output).item()
 
                     # **确保 predicted_class == 0 表示 flowchart**
-                    if predicted_class == 2:  # `0` 代表 Flowchart 类别
-                        print(f"✅ Flowchart detected: {image_path}")
-                        flowchart_dict[pdf_folder] = image_path
-                        break  # **只存当前 PDF 文件夹的第一张 flowchart**
+                    if predicted_class == 2:  # `2` 代表 Flowchart 类别
+                        print(f"🔎 Classifier detected flowchart candidate: {image_path}")
+                        # 用 VLM 二次确认并生成 caption
+                        is_chart, caption = analyze_flowchart_with_vlm(image_path)
+                        if is_chart:
+                            print(f"✅ VLM confirmed flowchart: {image_path}")
+                            flowchart_dict[pdf_folder] = {
+                                "path": image_path,
+                                "caption": caption
+                            }
+                            break  # 只存当前 PDF 文件夹的第一张确认的 flowchart
+                        else:
+                            print(f"❌ VLM rejected as non-chart: {image_path}")
+                            # 继续检查下一张图片
 
     # 只有检测到 Flowchart 时才保存 JSON
     if flowchart_dict:
@@ -146,11 +219,25 @@ def insert_ref_images(json_path, ref_names, text):
 
                 if 1 <= ref_num <= len(ref_names):
                     ref_name = ref_names[ref_num - 1]
-                    jpg_path = img_mapping.get(ref_name, "")
+                    entry = img_mapping.get(ref_name, "")
                 else:
                     ref_name = f"ref_{ref_num}"
+                    entry = ""
+
+                # 兼容新旧 JSON 格式
+                if isinstance(entry, dict):
+                    jpg_path = entry.get("path", "")
+                    caption = entry.get("caption", "")
+                elif isinstance(entry, str):
+                    jpg_path = entry
+                    caption = ""
+                else:
                     jpg_path = ""
-                
+                    caption = ""
+
+                if not caption:
+                    caption = f"Chart from '{ref_name}'"
+
                 if jpg_path:
                     # 将路径中可能混合的正斜杠和反斜杠拆分为多个部分
                     parts = re.split(r'[\\/]+', jpg_path)
@@ -163,10 +250,10 @@ def insert_ref_images(json_path, ref_names, text):
 
                     html_block = (
                         f"<div style=\"text-align:center\">\n"
-                        f"    <img src=\"{normalized_jpg_path_url}\" alt=\"the chart of {ref_name}\" style=\"width:60%;\"/>\n"
+                        f"    <img src=\"{normalized_jpg_path_url}\" alt=\"{caption}\" style=\"width:60%;\"/>\n"
                         f"</div>\n"
                         f"<div style=\"text-align:center;font-size:smaller;\">\n"
-                        f"    Fig {img_index}: Chart from \'{ref_name}\'\n"
+                        f"    Fig {img_index}: {caption}\n"
                         f"</div>"
                     )
                     new_lines.append(html_block)
@@ -254,10 +341,24 @@ def insert_tex_images(json_path, ref_names, text):
                 # 判断这个编号是否在 ref_names 范围内
                 if 1 <= ref_num <= len(ref_names):
                     ref_name = ref_names[ref_num - 1]
-                    jpg_path = img_mapping.get(ref_name, "")
+                    entry = img_mapping.get(ref_name, "")
                 else:
                     ref_name = f"ref_{ref_num}"
+                    entry = ""
+
+                # 兼容新旧 JSON 格式
+                if isinstance(entry, dict):
+                    jpg_path = entry.get("path", "")
+                    caption = entry.get("caption", "")
+                elif isinstance(entry, str):
+                    jpg_path = entry
+                    caption = ""
+                else:
                     jpg_path = ""
+                    caption = ""
+
+                if not caption:
+                    caption = f"Chart from '{ref_name}'"
 
                 if jpg_path:
                     # 规范化路径
@@ -269,11 +370,13 @@ def insert_tex_images(json_path, ref_names, text):
                     normalized_jpg_path_url = normalized_jpg_path
 
                     # 构建 LaTeX figure 块
+                    # 转义 caption 中的 LaTeX 特殊字符
+                    tex_caption = caption.replace('&', r'\&').replace('%', r'\%').replace('_', r'\_')
                     tex_block = (
                         r"\begin{figure}[htbp]" "\n"
                         r"  \centering" "\n"
                         f"  \\includegraphics[width=0.5\\textwidth]{{{normalized_jpg_path_url}}}\n"
-                        f"  \\caption{{Chart from \\textit{ref_name}}}\n"
+                        f"  \\caption{{{tex_caption}}}\n"
                         r"\end{figure}"
                     )
 

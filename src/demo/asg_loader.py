@@ -165,6 +165,9 @@ class DocumentLoading:
         # 检查是否有预处理好的 markdown（来自 local_pdfs，经 download_pdfs_sync 复制）
         pre_processed_dir = os.path.join("src", "static", "data", "pdf", "recommend_pdfs_md", base_name)
         pre_processed_auto_dir = os.path.join(pre_processed_dir, "auto")
+        print(f"[DEBUG load_pdf] base_name={base_name}")
+        print(f"[DEBUG load_pdf] pre_processed_dir={pre_processed_dir}, exists={os.path.isdir(pre_processed_dir)}")
+        print(f"[DEBUG load_pdf] pre_processed_auto_dir={pre_processed_auto_dir}, exists={os.path.isdir(pre_processed_auto_dir)}")
 
         if os.path.isdir(pre_processed_auto_dir):
             # 查找 auto/ 下的 .md 文件
