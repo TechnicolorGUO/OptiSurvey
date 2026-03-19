@@ -662,7 +662,13 @@ def upload_refs_sync(request):
                         continue
 
             update_progress(operation_id, 70, "Generating JSON data...")
-            
+
+            # 清理预处理 markdown 临时目录
+            recommend_md_dir = os.path.join("src", "static", "data", "pdf", "recommend_pdfs_md")
+            if os.path.exists(recommend_md_dir):
+                shutil.rmtree(recommend_md_dir)
+                print("Cleaned up recommend_pdfs_md directory.")
+
             new_file_name = Global_survey_id
             csvfile_name = new_file_name + '.'+ file_name.split('.')[-1]
 
@@ -1190,6 +1196,21 @@ def download_pdfs_sync(request):
                             file_size = os.path.getsize(pdf_filename)
                             downloaded_files.append(pdf_filename)
                             print(f"Success (local copy): {pdf_filename} ({file_size/1024/1024:.2f}MB)")
+
+                            # 检查是否有预处理好的 MineRU markdown 文件夹
+                            pdf_base_name = os.path.splitext(os.path.basename(source_path))[0]
+                            pdf_parent_dir = os.path.dirname(source_path)
+                            pre_processed_md_dir = os.path.join(pdf_parent_dir, pdf_base_name)
+                            pre_processed_md_file = os.path.join(pre_processed_md_dir, "auto", f"{pdf_base_name}.md")
+
+                            if os.path.exists(pre_processed_md_file):
+                                recommend_md_dir = os.path.join(os.getcwd(), "src", "static", "data", "pdf", "recommend_pdfs_md")
+                                os.makedirs(recommend_md_dir, exist_ok=True)
+                                dest_md_dir = os.path.join(recommend_md_dir, sanitized_title)
+                                if os.path.exists(dest_md_dir):
+                                    shutil.rmtree(dest_md_dir)
+                                shutil.copytree(pre_processed_md_dir, dest_md_dir)
+                                print(f"Copied pre-processed markdown for {pdf_base_name} -> {sanitized_title}")
                         else:
                             print(f"Local file not found: {source_path}")
                             failed_downloads.append({"url": pdf_url, "reason": "Local file not found"})

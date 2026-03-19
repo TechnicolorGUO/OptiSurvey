@@ -162,8 +162,28 @@ class DocumentLoading:
         base_name = os.path.splitext(os.path.basename(pdf_file))[0]
         target_dir = os.path.join(output_dir, base_name, "auto")
 
-        # 1. Convert PDF to markdown if the folder doesn't exist
-        self.convert_pdf_to_md(pdf_file, output_dir)
+        # 检查是否有预处理好的 markdown（来自 local_pdfs，经 download_pdfs_sync 复制）
+        pre_processed_dir = os.path.join("src", "static", "data", "pdf", "recommend_pdfs_md", base_name)
+        pre_processed_auto_dir = os.path.join(pre_processed_dir, "auto")
+
+        if os.path.isdir(pre_processed_auto_dir):
+            # 查找 auto/ 下的 .md 文件
+            md_files = [f for f in os.listdir(pre_processed_auto_dir) if f.endswith('.md')]
+            if md_files:
+                # 直接复制预处理结果，跳过 MineRU
+                dest_dir = os.path.join(output_dir, base_name)
+                if not os.path.exists(dest_dir):
+                    shutil.copytree(pre_processed_dir, dest_dir)
+                # 如果内部 md 文件名和 base_name 不一致，重命名以匹配
+                dest_auto_dir = os.path.join(dest_dir, "auto")
+                existing_md = os.path.join(dest_auto_dir, md_files[0])
+                expected_md = os.path.join(dest_auto_dir, f"{base_name}.md")
+                if os.path.exists(existing_md) and not os.path.exists(expected_md):
+                    os.rename(existing_md, expected_md)
+                print(f"Using pre-processed markdown for {base_name}, skipping MineRU.")
+        else:
+            # 1. Convert PDF to markdown if the folder doesn't exist
+            self.convert_pdf_to_md(pdf_file, output_dir)
 
         # 2. Process the markdown file in the output directory
         md_file_path = os.path.join(target_dir, f"{base_name}.md")
