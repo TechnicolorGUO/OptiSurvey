@@ -1799,10 +1799,10 @@ def get_survey_id_sync(request):
 
 @csrf_exempt
 @timeout_handler(1800)  # 30分钟超时
-def generate_pdf_sync(request):
+def generate_pdf_sync(request, operation_id=None):
     if request.method == 'POST':
         # 获取operation_id用于进度跟踪
-        operation_id = getattr(request, 'operation_id', f"pdf_{int(time.time())}")
+        operation_id = operation_id or getattr(request, 'operation_id', f"pdf_{int(time.time())}")
         update_progress(operation_id, 10, "Starting PDF generation...")
         
         survey_id = request.POST.get('survey_id', '') or Global_survey_id
@@ -1887,7 +1887,8 @@ def generate_pdf(request):
         success = task_manager.start_task(
             operation_id,
             generate_pdf_sync,
-            request
+            request,
+            operation_id
         )
         if not success:
             return JsonResponse({'error': 'PDF generation task already running'}, status=409)
@@ -1901,11 +1902,11 @@ def generate_pdf(request):
 
 @csrf_exempt
 @timeout_handler(1800)  # 30分钟超时
-def generate_pdf_from_tex_sync(request):
+def generate_pdf_from_tex_sync(request, operation_id=None):
     global Global_survey_id, Global_survey_title
     if request.method == 'POST':
         # 获取operation_id用于进度跟踪
-        operation_id = getattr(request, 'operation_id', f"latex_{int(time.time())}")
+        operation_id = operation_id or getattr(request, 'operation_id', f"latex_{int(time.time())}")
         update_progress(operation_id, 10, "Starting LaTeX PDF generation...")
         
         print(f"Request content type: {request.content_type}")
@@ -2262,7 +2263,8 @@ def automatic_taxonomy(request):
         success = task_manager.start_task(
             operation_id, 
             automatic_taxonomy_sync, 
-            request
+            request,
+            operation_id
         )
         
         if not success:
@@ -2314,7 +2316,8 @@ def generate_pdf_from_tex(request):
         success = task_manager.start_task(
             operation_id,
             generate_pdf_from_tex_sync,
-            request
+            request,
+            operation_id
         )
         if not success:
             return JsonResponse({'error': 'LaTeX PDF generation task already running'}, status=409)

@@ -194,7 +194,7 @@ def search_sections(md_path: str):
         # [可选调试输出] 打印当前标题层级及其文本
         
 
-    return sections[1:]
+    return sections
     
 def abstract_to_tex(section):
     """
@@ -737,6 +737,63 @@ def insert_figures(png_path, tex_path, json_path, ref_names, survey_title, new_t
     print(f"已生成新的 TeX 文件: {new_tex_path}")
     return new_tex_path
 
+def _normalize_survey_title(raw_title):
+    """Normalizes the survey title before writing it into LaTeX."""
+    normalized = re.sub(r'\s+', ' ', raw_title).strip()
+    if not re.match(r'(?i)^a survey of\b', normalized):
+        normalized = 'A Survey of ' + normalized
+    return normalized
+
+def _find_balanced_command_block(text, command_name):
+    """
+    Returns the [start, end) slice for a LaTeX command like \title{...} or \author{...}.
+    Nested braces inside the command body are handled correctly.
+    """
+    match = re.search(r'\\' + re.escape(command_name) + r'\s*\{', text)
+    if not match:
+        return None, None
+
+    depth = 0
+    idx = match.end() - 1
+    while idx < len(text):
+        if text[idx] == '{':
+            depth += 1
+        elif text[idx] == '}':
+            depth -= 1
+            if depth == 0:
+                return match.start(), idx + 1
+        idx += 1
+
+    return None, None
+
+def _rewrite_frontmatter(text, new_title):
+    """
+    Rebuilds the document front matter so malformed title remnants do not survive.
+    This fixes broken blocks such as `itle{...}` that leave stray text before \author
+    and push the author block and正文 onto the next page.
+    """
+    begin_document = re.search(r'\\begin\{document\}', text)
+    if not begin_document:
+        return text
+
+    title_block = '\\title{' + new_title + '}'
+    author_start, _ = _find_balanced_command_block(text, 'author')
+    maketitle_match = re.search(r'\\maketitle\b', text)
+
+    if author_start is not None and author_start >= begin_document.end():
+        prefix = text[:begin_document.end()] + '\n\n' + title_block + '\n\n'
+        return prefix + text[author_start:]
+
+    if maketitle_match and maketitle_match.start() >= begin_document.end():
+        prefix = text[:begin_document.end()] + '\n\n' + title_block + '\n\n'
+        return prefix + text[maketitle_match.start():]
+
+    title_start, title_end = _find_balanced_command_block(text, 'title')
+    if title_start is not None:
+        return text[:title_start] + title_block + text[title_end:]
+
+    return text
+
 def postprocess(tex_path, new_title):
     """
     读取给定的 TeX 文件 (tex_path):
@@ -746,7 +803,7 @@ def postprocess(tex_path, new_title):
       3) 将所有由 \[ \] 包裹的数学公式都替换为 \begin{dmath} \end{dmath}。
     最后将结果覆盖写回原始文件，并返回 tex_path。
     """
-    new_title = 'A Survey of ' + new_title
+    new_title = _normalize_survey_title(new_title)
     # 1) 读取文件内容
     with open(tex_path, 'r', encoding='utf-8') as f:
         text_content = f.read()
@@ -790,6 +847,9 @@ def postprocess(tex_path, new_title):
     #      (\d+)   ---- 匹配并捕获1--多位数字
     #      (?:\\)? ---- 可选的一个反斜杠
     #      \]      ---- 匹配方括号的结尾 ']'
+    text_content = _rewrite_frontmatter(text_content, new_title)
+    print(f"[info] normalized title/front matter: {new_title}")
+
     ref_pattern = re.compile(r'(?:\\)?\[(\d+)(?:\\)?\]')
     text_processed = ref_pattern.sub(r'[\1]', text_content)
 
