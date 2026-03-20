@@ -46,7 +46,11 @@ def analyze_flowchart_with_vlm(image_path):
         ext = os.path.splitext(image_path)[1].lower()
         mime = "image/png" if ext == ".png" else "image/jpeg"
 
-        vlm_model = os.environ.get("VLM_MODEL", os.environ.get("MODEL"))
+        vlm_model = os.environ.get("VLM_MODEL") or os.environ.get("MODEL")
+        if not vlm_model:
+            raise ValueError("VLM_MODEL or MODEL environment variable must be set")
+        print(f"🔧 Using VLM model: {vlm_model}")
+
         response = client.chat.completions.create(
             model=vlm_model,
             messages=[{
@@ -70,11 +74,18 @@ def analyze_flowchart_with_vlm(image_path):
                     }
                 ]
             }],
-            max_tokens=256,
-            temperature=0.3,
+            max_tokens=1024,
+            temperature=0.1,
         )
 
-        result_text = response.choices[0].message.content.strip()
+        # 调试：打印完整响应结构
+        result_text = response.choices[0].message.content
+        if result_text is None:
+            print(f"⚠️ VLM returned None for {os.path.basename(image_path)}")
+            print(f"   Full response: {response}")
+            print(f"   Message: {response.choices[0].message}")
+            return False, ""
+        result_text = result_text.strip()
         print(f"🤖 VLM response for {os.path.basename(image_path)}: {result_text}")
 
         # 解析响应
@@ -91,8 +102,8 @@ def analyze_flowchart_with_vlm(image_path):
 
     except Exception as e:
         print(f"⚠️ VLM analysis failed for {image_path}: {e}")
-        # VLM 失败时回退：假设分类器结果正确，使用默认 caption
-        return True, ""
+        # VLM 失败时保守处理：不插入该图片
+        return False, ""
 
 def detect_flowcharts(survey_id):
     """ 在指定 survey_id 目录下查找 flowchart，并保存 JSON 结果 """
