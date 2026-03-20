@@ -1883,6 +1883,7 @@ def generate_pdf(request):
     """异步版本的PDF生成接口，避免Cloudflare 524超时"""
     if request.method == 'POST':
         operation_id = f"pdf_{int(time.time())}"
+        request.operation_id = operation_id
         success = task_manager.start_task(
             operation_id,
             generate_pdf_sync,

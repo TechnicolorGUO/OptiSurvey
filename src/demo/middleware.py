@@ -24,6 +24,10 @@ class AsyncTaskManager:
 
         def task_wrapper():
             try:
+                if args:
+                    request_candidate = args[0]
+                    if hasattr(request_candidate, 'META'):
+                        request_candidate.operation_id = task_id
                 print(f"[DEBUG] Task {task_id} started in background thread")
                 result = target_func(*args, **kwargs)
                 self.running_tasks[task_id]['status'] = 'completed'
