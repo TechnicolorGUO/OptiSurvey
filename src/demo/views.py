@@ -1097,15 +1097,14 @@ def generate_arxiv_query(request):
 
 @csrf_exempt
 @timeout_handler(1800)  # 30分钟超时
-def download_pdfs_sync(request):
+def download_pdfs_sync(request, operation_id=None):
     """同步版本的PDF下载函数"""
     def clean_filename(filename):
         filename = filename.strip()  # 去掉首尾空格和换行符
         filename = re.sub(r'[\\/*?:"<>|\n\r]', '', filename)  # 移除非法字符
         return filename
     
-    start_time = time.time()
-    operation_id = f"download_{int(start_time)}"
+    operation_id = operation_id or getattr(request, 'operation_id', f"download_{int(time.time())}")
     print(f"[DEBUG] download_pdfs_sync started with operation_id: {operation_id}")
     update_progress(operation_id, 0, "Starting PDF downloads...")
     
@@ -1345,10 +1344,9 @@ def get_topic(request):
 
 @csrf_exempt
 @timeout_handler(1800)  # 30分钟超时
-def automatic_taxonomy_sync(request):
+def automatic_taxonomy_sync(request, operation_id=None):
     """同步版本的自动分类函数"""
-    start_time = time.time()
-    operation_id = f"taxonomy_{int(start_time)}"
+    operation_id = operation_id or getattr(request, 'operation_id', f"taxonomy_{int(time.time())}")
     update_progress(operation_id, 0, "Starting automatic taxonomy...")
     
     global Global_description_list, Global_df_selected, Global_cluster_names, Global_ref_list, Global_category_label, Global_collection_names_clustered, Global_cluster_num
@@ -1723,10 +1721,9 @@ def get_survey(request):
     
 @csrf_exempt
 @timeout_handler(1800)  # 30分钟超时
-def get_survey_id_sync(request):
+def get_survey_id_sync(request, operation_id=None):
     """同步版本的获取调研ID函数"""
-    start_time = time.time()
-    operation_id = f"survey_{int(start_time)}"
+    operation_id = operation_id or getattr(request, 'operation_id', f"survey_{int(time.time())}")
     update_progress(operation_id, 0, "Starting survey generation...")
     
     global Global_survey_id, Global_survey_title, Global_collection_names_clustered, Global_citation_data
