@@ -530,17 +530,6 @@ def md_to_tex_section_without_jpg(section):
                 "chat_template_kwargs": {"enable_thinking": False},
             },
         )
-        chat_response = client.chat.completions.create(
-            model=os.environ.get("MODEL"),
-            max_tokens=32768,
-            temperature=0.5,
-            stop="<|im_end|>",
-            stream=True,
-            messages=messages,
-            extra_body={
-                "chat_template_kwargs": {"enable_thinking": False},
-            },
-        )
 
         # 流式读取返回
         tex_body = ""
@@ -762,23 +751,34 @@ def postprocess(tex_path, new_title):
     with open(tex_path, 'r', encoding='utf-8') as f:
         text_content = f.read()
 
-    # 2) 替换 \title{...} 中的内容
-    # 匹配 \title{...} (可能跨行，可能包含\\等)
-    title_pattern = re.compile(r'\\title\{[^}]*(?:\{[^}]*\}[^}]*)*\}', re.DOTALL)
-    
-    # 检查是否找到title
-    title_match = title_pattern.search(text_content)
-    if title_match:
-        # 替换为新标题，保持IEEE格式（简单版本，不包含脚注）
-        # 使用 r'' 原始字符串确保反斜杠不被解释
-        text_content = title_pattern.sub(r'\title{' + new_title + '}', text_content, count=1)
+    # 2) 替换 \title{...} 中的内容（使用括号计数处理任意深度的嵌套）
+    def find_title_block(text):
+        """返回 \\title{...} 完整块的 (start, end) 位置，处理任意嵌套括号。"""
+        m = re.search(r'\\title\{', text)
+        if not m:
+            return None, None
+        depth = 0
+        i = m.end() - 1  # 指向第一个 '{'
+        while i < len(text):
+            if text[i] == '{':
+                depth += 1
+            elif text[i] == '}':
+                depth -= 1
+                if depth == 0:
+                    return m.start(), i + 1
+            i += 1
+        return None, None
+
+    title_start, title_end = find_title_block(text_content)
+    if title_start is not None:
+        text_content = text_content[:title_start] + '\\title{' + new_title + '}' + text_content[title_end:]
         print(f"[信息] 已替换 title 为: {new_title}")
     else:
         # 如果没找到 \title，尝试在 \author 前插入
         author_match = re.search(r'\\author\{', text_content)
         if author_match:
             insert_pos = author_match.start()
-            text_content = text_content[:insert_pos] + r'\title{' + new_title + '}\n\n' + text_content[insert_pos:]
+            text_content = text_content[:insert_pos] + '\\title{' + new_title + '}\n\n' + text_content[insert_pos:]
             print(f"[信息] 已在 \\author 前插入 title: {new_title}")
         else:
             print(f"[警告] 未找到 '\\title' 或 '\\author'，无法插入标题。")
