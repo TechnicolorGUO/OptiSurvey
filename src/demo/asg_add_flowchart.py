@@ -3,6 +3,7 @@ import os
 import re
 import base64
 from urllib.parse import quote
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import torch
 import torchvision.transforms as transforms
@@ -78,12 +79,9 @@ def analyze_flowchart_with_vlm(image_path):
             temperature=0.1,
         )
 
-        # 调试：打印完整响应结构
         result_text = response.choices[0].message.content
         if result_text is None:
-            print(f"⚠️ VLM returned None for {os.path.basename(image_path)}")
-            print(f"   Full response: {response}")
-            print(f"   Message: {response.choices[0].message}")
+            print(f"⚠️ VLM returned None for {os.path.basename(image_path)}, skipping")
             return False, ""
         result_text = result_text.strip()
         print(f"🤖 VLM response for {os.path.basename(image_path)}: {result_text}")
@@ -105,32 +103,25 @@ def analyze_flowchart_with_vlm(image_path):
         # VLM 失败时保守处理：不插入该图片
         return False, ""
 
-def detect_flowcharts(survey_id):
-    """ 在指定 survey_id 目录下查找 flowchart，并保存 JSON 结果 """
-    survey_path = os.path.join(BASE_DIR, survey_id)  # 该 survey_id 的目录
-    if not os.path.exists(survey_path):
-        print(f"❌ 目录 {survey_path} 不存在！")
-        return
+def _process_single_pdf_images(pdf_folder, pdf_folder_path):
+    """
+    处理单个 PDF 文件夹中的所有图片，返回 (pdf_folder, result) 或 None
+    result 是 {"path": image_path, "caption": caption} 或 None
+    """
+    print(f"🔍 处理 PDF 文件夹: {pdf_folder}")
 
-    flowchart_dict = {}  # 存储 flowchart 结果
+    candidates = []  # 收集该 PDF 的所有候选图片
 
-    # 遍历该 survey 目录下的所有 PDF 文件夹
-    for pdf_folder in os.listdir(survey_path):
-        pdf_folder_path = os.path.join(survey_path, pdf_folder)
+    # 遍历所有 `xxx/auto/images` 目录
+    for root, dirs, files in os.walk(pdf_folder_path):
+        if "auto/images" in root.replace("\\", "/"):  # 兼容 Windows 和 Linux
+            for filename in sorted(files):  # 按文件名排序
+                if not filename.lower().endswith(".jpg"):  # 只处理 JPG
+                    continue
 
-        if not os.path.isdir(pdf_folder_path):
-            continue  # 只处理文件夹
+                image_path = os.path.join(root, filename)
 
-        print(f"🔍 处理 PDF 文件夹: {pdf_folder}")
-
-        # 遍历所有 `xxx/auto/images` 目录
-        for root, dirs, files in os.walk(pdf_folder_path):
-            if "auto/images" in root.replace("\\", "/"):  # 兼容 Windows 和 Linux
-                for filename in sorted(files):  # 按文件名排序，保证第一个找到的 Flowchart 被选用
-                    if not filename.lower().endswith(".jpg"):  # 只处理 JPG
-                        continue
-
-                    image_path = os.path.join(root, filename)
+                try:
                     img = Image.open(image_path).convert("RGB")  # 打开图片并转换为 RGB
 
                     # 预处理图片并转换为张量
@@ -141,21 +132,63 @@ def detect_flowcharts(survey_id):
                         output = model(img_tensor)
                         predicted_class = torch.argmax(output).item()
 
-                    # **确保 predicted_class == 0 表示 flowchart**
+                    # **确保 predicted_class == 2 表示 flowchart**
                     if predicted_class == 2:  # `2` 代表 Flowchart 类别
                         print(f"🔎 Classifier detected flowchart candidate: {image_path}")
-                        # 用 VLM 二次确认并生成 caption
-                        is_chart, caption = analyze_flowchart_with_vlm(image_path)
-                        if is_chart:
-                            print(f"✅ VLM confirmed flowchart: {image_path}")
-                            flowchart_dict[pdf_folder] = {
-                                "path": image_path,
-                                "caption": caption
-                            }
-                            break  # 只存当前 PDF 文件夹的第一张确认的 flowchart
-                        else:
-                            print(f"❌ VLM rejected as non-chart: {image_path}")
-                            # 继续检查下一张图片
+                        candidates.append(image_path)
+                except Exception as e:
+                    print(f"⚠️ Error processing image {image_path}: {e}")
+                    continue
+
+    # 用 VLM 逐个验证候选图片（按文件名顺序）
+    for image_path in candidates:
+        is_chart, caption = analyze_flowchart_with_vlm(image_path)
+        if is_chart and caption:  # 必须有 caption 才算有效
+            print(f"✅ VLM confirmed flowchart: {image_path}")
+            return (pdf_folder, {"path": image_path, "caption": caption})
+        else:
+            print(f"❌ VLM rejected as non-chart: {image_path}")
+
+    return None  # 该 PDF 没有有效 flowchart
+
+
+def detect_flowcharts(survey_id, max_workers=4):
+    """
+    在指定 survey_id 目录下查找 flowchart，并保存 JSON 结果
+    使用多线程并行处理多个 PDF 文件夹
+    """
+    survey_path = os.path.join(BASE_DIR, survey_id)  # 该 survey_id 的目录
+    if not os.path.exists(survey_path):
+        print(f"❌ 目录 {survey_path} 不存在！")
+        return
+
+    flowchart_dict = {}  # 存储 flowchart 结果
+    pdf_folders = []  # 收集所有 PDF 文件夹
+
+    # 收集所有 PDF 文件夹
+    for pdf_folder in os.listdir(survey_path):
+        pdf_folder_path = os.path.join(survey_path, pdf_folder)
+        if os.path.isdir(pdf_folder_path):
+            pdf_folders.append((pdf_folder, pdf_folder_path))
+
+    if not pdf_folders:
+        print(f"⚠️ 没有找到 PDF 文件夹")
+        return
+
+    print(f"🚀 开始并行处理 {len(pdf_folders)} 个 PDF 文件夹 (max_workers={max_workers})")
+
+    # 并行处理所有 PDF 文件夹
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_pdf = {
+            executor.submit(_process_single_pdf_images, pdf_folder, pdf_folder_path): pdf_folder
+            for pdf_folder, pdf_folder_path in pdf_folders
+        }
+
+        for future in as_completed(future_to_pdf):
+            result = future.result()
+            if result:
+                pdf_folder, data = result
+                flowchart_dict[pdf_folder] = data
 
     # 只有检测到 Flowchart 时才保存 JSON
     if flowchart_dict:
@@ -164,7 +197,7 @@ def detect_flowcharts(survey_id):
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(flowchart_dict, f, indent=4, ensure_ascii=False)
 
-        print(f"📁 Flowchart 结果已保存: {json_path}")
+        print(f"📁 Flowchart 结果已保存: {json_path} (共 {len(flowchart_dict)} 个)")
     else:
         print(f"⚠️ 没有检测到 Flowchart，未生成 JSON")
 

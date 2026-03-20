@@ -1096,7 +1096,7 @@ def generate_arxiv_query(request):
     return JsonResponse({'error': 'Invalid request method.'}, status=405)
 
 @csrf_exempt
-@timeout_handler(900)  # 15分钟超时
+@timeout_handler(1800)  # 30分钟超时
 def download_pdfs_sync(request):
     """同步版本的PDF下载函数"""
     def clean_filename(filename):
@@ -1798,7 +1798,7 @@ def get_survey_id_sync(request):
         return JsonResponse({'error': f'Survey generation failed: {str(e)}'}, status=500)
 
 @csrf_exempt
-@timeout_handler(900)  # 15分钟超时
+@timeout_handler(1800)  # 30分钟超时
 def generate_pdf_sync(request):
     if request.method == 'POST':
         # 获取operation_id用于进度跟踪
@@ -1899,7 +1899,7 @@ def generate_pdf(request):
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 @csrf_exempt
-@timeout_handler(900)  # 15分钟超时
+@timeout_handler(1800)  # 30分钟超时
 def generate_pdf_from_tex_sync(request):
     global Global_survey_id, Global_survey_title
     if request.method == 'POST':
