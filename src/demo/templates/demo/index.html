@@ -2194,7 +2194,16 @@ function select_sections() {
 		while (status === 'running') {
 			await new Promise(r => setTimeout(r, 2000));
 			try {
-				const res = await fetch(`/get_operation_progress/?operation_id=${operationId}`);
+				const progressUrl = `/get_operation_progress/?operation_id=${encodeURIComponent(operationId)}&_=${Date.now()}`;
+				const res = await fetch(progressUrl, {
+					cache: 'no-store',
+					headers: {
+						'Accept': 'application/json'
+					}
+				});
+				if (!res.ok) {
+					throw new Error(`Progress request failed with status ${res.status}`);
+				}
 				const data = await res.json();
 				status = data.status || 'running';
 
@@ -2244,7 +2253,7 @@ function select_sections() {
 				}
 			} catch (error) {
 				console.error('Progress polling error:', error);
-				// 继续尝试
+				updateProgressBar(0, 'Unable to refresh progress, retrying...');
 			}
 		}
 		hideUploadProgress();

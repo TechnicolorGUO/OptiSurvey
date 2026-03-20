@@ -253,6 +253,13 @@ def get_progress(operation_id):
     """获取操作进度"""
     return progress_tracker.get(operation_id, {'progress': 0, 'message': 'Starting...', 'timestamp': time.time()})
 
+def no_cache_json_response(data, status=200):
+    response = JsonResponse(data, status=status)
+    response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+    return response
+
 # 添加进度查询端点
 @csrf_exempt
 def get_operation_progress(request):
@@ -276,7 +283,7 @@ def get_operation_progress(request):
                     try:
                         import json
                         content = json.loads(result.content.decode('utf-8'))
-                        return JsonResponse({
+                        return no_cache_json_response({
                             'progress': 100,
                             'message': 'Task completed successfully!',
                             'status': 'completed',
@@ -285,7 +292,7 @@ def get_operation_progress(request):
                     except Exception as e:
                         print(f"[DEBUG] Error parsing HttpResponse content: {e}")
                         # 对于PDF等二进制文件，我们不解析内容，只返回完成状态
-                        return JsonResponse({
+                        return no_cache_json_response({
                             'progress': 100,
                             'message': 'Task completed successfully!',
                             'status': 'completed',
@@ -296,7 +303,7 @@ def get_operation_progress(request):
                     try:
                         import json
                         content = json.loads(result.content.decode('utf-8'))
-                        return JsonResponse({
+                        return no_cache_json_response({
                             'progress': 100,
                             'message': 'Task completed successfully!',
                             'status': 'completed',
@@ -304,14 +311,14 @@ def get_operation_progress(request):
                         })
                     except Exception as e:
                         print(f"[DEBUG] Error parsing JsonResponse content: {e}")
-                        return JsonResponse({
+                        return no_cache_json_response({
                             'progress': 100,
                             'message': 'Task completed successfully!',
                             'status': 'completed'
                         })
                 else:
                     # 普通的结果对象
-                    return JsonResponse({
+                    return no_cache_json_response({
                         'progress': 100,
                         'message': 'Task completed successfully!',
                         'status': 'completed',
@@ -320,7 +327,7 @@ def get_operation_progress(request):
             elif task_status['status'] == 'failed':
                 # 任务失败
                 print(f"[DEBUG] Task {operation_id} failed: {task_status.get('error')}")
-                return JsonResponse({
+                return no_cache_json_response({
                     'progress': -1,
                     'message': f"Task failed: {task_status.get('error', 'Unknown error')}",
                     'status': 'failed',
@@ -331,7 +338,7 @@ def get_operation_progress(request):
                 print(f"[DEBUG] Task {operation_id} is running, checking progress")
                 progress_info = get_progress(operation_id)
                 print(f"[DEBUG] Progress info: {progress_info}")
-                return JsonResponse({
+                return no_cache_json_response({
                     **progress_info,
                     'status': 'running'
                 })
@@ -339,12 +346,12 @@ def get_operation_progress(request):
                 # 任务未找到，返回默认进度
                 print(f"[DEBUG] Task {operation_id} not found, returning default progress")
                 progress_info = get_progress(operation_id)
-                return JsonResponse({
+                return no_cache_json_response({
                     **progress_info,
                     'status': 'not_found'
                 })
-        return JsonResponse({'error': 'operation_id is required'}, status=400)
-    return JsonResponse({'error': 'Invalid request method'}, status=405)
+        return no_cache_json_response({'error': 'operation_id is required'}, status=400)
+    return no_cache_json_response({'error': 'Invalid request method'}, status=405)
 
 class reference_collection(object):
     def __init__(
