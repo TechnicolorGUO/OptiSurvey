@@ -88,6 +88,10 @@ MD_PATH = './src/static/data/md/'
 INFO_PATH = './src/static/data/info/'
 IMG_PATH = './src/static/img/'
 
+OPTIRESEARCH_DEV_MODE = True
+OPTIRESEARCH_DEV_PDF_RELATIVE_PATH = os.path.join('src', 'static', 'data', 'results', 'survey_fa56a18080_latex.pdf')
+OPTIRESEARCH_DEV_FALLBACK_TO_LATEST = True
+
 paths = [DATA_PATH, TXT_PATH, TSV_PATH, MD_PATH, INFO_PATH, IMG_PATH]
 
 for path in paths:
@@ -528,6 +532,429 @@ def get_surveys(request):
 
     surveys = get_existing_survey_ids()
     return JsonResponse({'surveys': surveys})
+
+def _strip_thinking_blocks(text):
+    if not text:
+        return ""
+    text = re.sub(r'<\s*think\s*>[\s\S]*?<\s*/\s*think\s*>', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'<\s*thinking\s*>[\s\S]*?<\s*/\s*thinking\s*>', '', text, flags=re.IGNORECASE)
+    return text.strip()
+
+def _get_optiresearch_payload_for_survey(survey_id):
+    if not survey_id:
+        return None
+
+    results_dir = os.path.join('src', 'static', 'data', 'results')
+    txt_dir = os.path.join('src', 'static', 'data', 'txt', survey_id)
+    info_dir = os.path.join('src', 'static', 'data', 'info', survey_id)
+    latex_filename = f'survey_{survey_id}_latex.pdf'
+    regular_filename = f'survey_{survey_id}.pdf'
+    latex_path = os.path.join(results_dir, latex_filename)
+    regular_path = os.path.join(results_dir, regular_filename)
+    generated_result_path = os.path.join(txt_dir, 'generated_result.json')
+    processed_md_path = os.path.join(info_dir, f'survey_{survey_id}_processed.md')
+    vanilla_md_path = os.path.join(info_dir, f'survey_{survey_id}_vanilla.md')
+    chat_enabled = (
+        os.path.exists(generated_result_path)
+        or os.path.exists(processed_md_path)
+        or os.path.exists(vanilla_md_path)
+    )
+
+    if not (os.path.exists(latex_path) or os.path.exists(regular_path) or os.path.exists(generated_result_path)):
+        return None
+
+    return {
+        'enabled': os.path.exists(latex_path),
+        'survey_id': survey_id,
+        'latex_pdf_url': f'/static/data/results/{latex_filename}' if os.path.exists(latex_path) else '',
+        'pdf_url': f'/static/data/results/{regular_filename}' if os.path.exists(regular_path) else '',
+        'chat_enabled': chat_enabled,
+        'has_generated_result': os.path.exists(generated_result_path),
+        'has_processed_markdown': os.path.exists(processed_md_path),
+    }
+
+def _extract_survey_id_from_latex_pdf(file_path):
+    file_name = os.path.basename(file_path or '')
+    match = re.match(r'^survey_(.+?)_latex\.pdf$', file_name)
+    return match.group(1) if match else ''
+
+def _build_optiresearch_payload_from_pdf(file_path, developer_override=False):
+    if not file_path or not os.path.exists(file_path):
+        return None
+
+    survey_id = _extract_survey_id_from_latex_pdf(file_path)
+    payload = _get_optiresearch_payload_for_survey(survey_id) if survey_id else None
+
+    if payload:
+        payload['enabled'] = True
+        payload['latex_pdf_url'] = f"/static/data/results/{os.path.basename(file_path)}"
+        payload['developer_override'] = developer_override
+        return payload
+
+    return {
+        'enabled': True,
+        'survey_id': survey_id,
+        'latex_pdf_url': f"/static/data/results/{os.path.basename(file_path)}",
+        'pdf_url': '',
+        'chat_enabled': False,
+        'has_generated_result': False,
+        'has_processed_markdown': False,
+        'developer_override': developer_override
+    }
+
+def _get_optiresearch_developer_payload():
+    if not OPTIRESEARCH_DEV_MODE:
+        return None
+
+    preferred_path = OPTIRESEARCH_DEV_PDF_RELATIVE_PATH
+    if preferred_path and os.path.exists(preferred_path):
+        return _build_optiresearch_payload_from_pdf(preferred_path, developer_override=True)
+
+    if not OPTIRESEARCH_DEV_FALLBACK_TO_LATEST:
+        return None
+
+    results_dir = os.path.join('src', 'static', 'data', 'results')
+    if not os.path.exists(results_dir):
+        return None
+
+    latex_candidates = []
+    for file_name in os.listdir(results_dir):
+        if not file_name.startswith('survey_') or not file_name.endswith('_latex.pdf'):
+            continue
+        full_path = os.path.join(results_dir, file_name)
+        latex_candidates.append((os.path.getmtime(full_path), full_path))
+
+    if not latex_candidates:
+        return None
+
+    latest_pdf_path = sorted(latex_candidates, key=lambda item: item[0], reverse=True)[0][1]
+    return _build_optiresearch_payload_from_pdf(latest_pdf_path, developer_override=True)
+
+def _find_latest_optiresearch_payload():
+    candidates = []
+    results_dir = os.path.join('src', 'static', 'data', 'results')
+    txt_root = os.path.join('src', 'static', 'data', 'txt')
+
+    if os.path.exists(results_dir):
+        for file_name in os.listdir(results_dir):
+            if not file_name.startswith('survey_') or not file_name.endswith('_latex.pdf'):
+                continue
+            survey_id = file_name[len('survey_'):-len('_latex.pdf')]
+            file_path = os.path.join(results_dir, file_name)
+            candidates.append((os.path.getmtime(file_path), survey_id))
+
+    if os.path.exists(txt_root):
+        for survey_id in os.listdir(txt_root):
+            generated_result_path = os.path.join(txt_root, survey_id, 'generated_result.json')
+            if os.path.exists(generated_result_path):
+                candidates.append((os.path.getmtime(generated_result_path), survey_id))
+
+    if not candidates:
+        return None
+
+    for _, survey_id in sorted(candidates, key=lambda item: item[0], reverse=True):
+        payload = _get_optiresearch_payload_for_survey(survey_id)
+        if payload:
+            return payload
+    return None
+
+def _load_optiresearch_context(survey_id):
+    if not survey_id:
+        return "", ""
+
+    info_dir = os.path.join('src', 'static', 'data', 'info', survey_id)
+    txt_dir = os.path.join('src', 'static', 'data', 'txt', survey_id)
+
+    processed_md_path = os.path.join(info_dir, f'survey_{survey_id}_processed.md')
+    vanilla_md_path = os.path.join(info_dir, f'survey_{survey_id}_vanilla.md')
+    generated_result_path = os.path.join(txt_dir, 'generated_result.json')
+
+    if os.path.exists(processed_md_path):
+        with open(processed_md_path, 'r', encoding='utf-8') as file:
+            return file.read(), processed_md_path
+
+    if os.path.exists(vanilla_md_path):
+        with open(vanilla_md_path, 'r', encoding='utf-8') as file:
+            return file.read(), vanilla_md_path
+
+    if os.path.exists(generated_result_path):
+        with open(generated_result_path, 'r', encoding='utf-8') as file:
+            generated_result = json.load(file)
+        return generated_result.get('content', ''), generated_result_path
+
+    return "", ""
+
+def _clean_optiresearch_section_title(title):
+    title = re.sub(r'[`*_#>\[\]\(\)]', ' ', title or '')
+    title = re.sub(r'\s+', ' ', title)
+    return title.strip()
+
+def _build_optiresearch_sections(context):
+    if not context:
+        return []
+
+    sections = []
+    heading_stack = []
+    current_section = None
+
+    def flush_section():
+        nonlocal current_section
+        if not current_section:
+            return
+        content = "\n".join(current_section['lines']).strip()
+        if content:
+            sections.append({
+                'section_path': current_section['section_path'],
+                'title_level': current_section['title_level'],
+                'content': content
+            })
+        current_section = None
+
+    for raw_line in context.splitlines():
+        stripped_line = raw_line.strip()
+        heading_match = re.match(r'^(#{1,6})\s+(.+?)\s*$', stripped_line)
+        if heading_match:
+            flush_section()
+            level = len(heading_match.group(1))
+            title = _clean_optiresearch_section_title(heading_match.group(2))
+            if not title:
+                continue
+
+            while heading_stack and heading_stack[-1]['level'] >= level:
+                heading_stack.pop()
+            heading_stack.append({'level': level, 'title': title})
+
+            current_section = {
+                'section_path': " > ".join(item['title'] for item in heading_stack),
+                'title_level': level,
+                'lines': []
+            }
+            continue
+
+        if current_section is None:
+            current_section = {
+                'section_path': 'Document Overview',
+                'title_level': 0,
+                'lines': []
+            }
+        current_section['lines'].append(raw_line)
+
+    flush_section()
+
+    if not sections and context.strip():
+        sections.append({
+            'section_path': 'Document Overview',
+            'title_level': 0,
+            'content': context.strip()
+        })
+
+    return sections
+
+def _extract_optiresearch_keywords(question):
+    stopwords = {
+        'the', 'and', 'for', 'with', 'that', 'this', 'from', 'into', 'about', 'what',
+        'which', 'when', 'where', 'why', 'how', 'does', 'have', 'has', 'had', 'were',
+        'was', 'are', 'is', 'can', 'could', 'would', 'should', 'their', 'there',
+        'them', 'then', 'than', 'also', 'been', 'being', 'your', 'you', 'our',
+        'his', 'her', 'its', 'they', 'who', 'whom', 'whose'
+    }
+    terms = re.findall(r'[a-zA-Z0-9][a-zA-Z0-9\-]{1,}', (question or '').lower())
+    keywords = []
+    for term in terms:
+        if len(term) < 3 or term in stopwords:
+            continue
+        if term not in keywords:
+            keywords.append(term)
+    return keywords
+
+def _select_optiresearch_sections(question, sections, max_sections=4):
+    if not sections:
+        return []
+
+    keywords = _extract_optiresearch_keywords(question)
+    normalized_question = (question or '').lower()
+    scored_sections = []
+
+    for index, section in enumerate(sections):
+        title = section['section_path'].lower()
+        content = section['content'].lower()
+        score = 0
+
+        for keyword in keywords:
+            score += title.count(keyword) * 6
+            score += content.count(keyword) * 2
+
+        if normalized_question and normalized_question in content:
+            score += 10
+        if any(part.strip().lower() in title for part in re.split(r'[?.,;:]\s*', normalized_question) if part.strip()):
+            score += 3
+
+        # Slight preference for titled sections over the document root.
+        if section['title_level'] > 0:
+            score += 1
+
+        scored_sections.append({
+            'section_path': section['section_path'],
+            'title_level': section['title_level'],
+            'content': section['content'],
+            'score': score,
+            'index': index
+        })
+
+    scored_sections.sort(key=lambda item: (-item['score'], item['index']))
+    selected = scored_sections[:max_sections]
+
+    if selected and selected[0]['score'] == 0:
+        selected = scored_sections[:min(2, len(scored_sections))]
+
+    return selected
+
+def _parse_optiresearch_response(response_text, fallback_sources):
+    cleaned = _strip_thinking_blocks(response_text)
+    fallback_sources = list(dict.fromkeys([source for source in fallback_sources if source]))
+    allowed_sources = set(fallback_sources)
+
+    def normalize_sources(sources):
+        normalized = [str(source).strip() for source in sources if str(source).strip()]
+        normalized = [source for source in normalized if source in allowed_sources]
+        return list(dict.fromkeys(normalized)) or fallback_sources
+
+    json_match = re.search(r'\{[\s\S]*\}', cleaned)
+    if json_match:
+        try:
+            payload = json.loads(json_match.group(0))
+            answer = str(payload.get('answer', '')).strip() or cleaned.strip()
+            sources = payload.get('sources', [])
+            if isinstance(sources, str):
+                sources = [sources]
+            if not isinstance(sources, list):
+                sources = []
+            return answer, normalize_sources(sources)
+        except Exception:
+            pass
+
+    sources_line_match = re.search(r'(?:^|\n)Sources?\s*:\s*(.+)$', cleaned, flags=re.IGNORECASE)
+    if sources_line_match:
+        sources_line = sources_line_match.group(1).strip()
+        answer = re.sub(r'(?:^|\n)Sources?\s*:\s*.+$', '', cleaned, flags=re.IGNORECASE).strip()
+        parsed_sources = [item.strip() for item in re.split(r'\s*\|\s*|,\s*', sources_line) if item.strip()]
+        return answer or cleaned.strip(), normalize_sources(parsed_sources)
+
+    return cleaned.strip(), fallback_sources
+
+@csrf_exempt
+def get_optiresearch_state(request):
+    requested_survey_id = request.GET.get('survey_id', '').strip()
+    developer_payload = _get_optiresearch_developer_payload()
+    if developer_payload:
+        payload = developer_payload
+    else:
+        payload = _get_optiresearch_payload_for_survey(requested_survey_id) if requested_survey_id else _find_latest_optiresearch_payload()
+
+    if payload is None:
+        return JsonResponse({
+            'enabled': False,
+            'survey_id': requested_survey_id,
+            'latex_pdf_url': '',
+            'pdf_url': '',
+            'chat_enabled': False,
+            'message': 'OptiResearch is unavailable until the LaTeX PDF is generated.'
+        })
+
+    if payload.get('developer_override') and not payload.get('chat_enabled'):
+        payload['message'] = 'OptiResearch developer mode is ready in reader-only mode.'
+    else:
+        payload['message'] = (
+            'OptiResearch is ready.'
+            if payload['enabled']
+            else 'OptiResearch is unavailable until the LaTeX PDF is generated.'
+        )
+    return JsonResponse(payload)
+
+@csrf_exempt
+def ask_optiresearch(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        return JsonResponse({'error': 'Invalid JSON payload'}, status=400)
+
+    survey_id = str(data.get('survey_id', '')).strip()
+    question = str(data.get('question', '')).strip()
+
+    if not survey_id:
+        return JsonResponse({'error': 'survey_id is required'}, status=400)
+    if not question:
+        return JsonResponse({'error': 'question is required'}, status=400)
+
+    context, source_path = _load_optiresearch_context(survey_id)
+    if not context.strip():
+        return JsonResponse({'error': 'Survey content is not available for OptiResearch yet.'}, status=404)
+
+    sections = _build_optiresearch_sections(context)
+    selected_sections = _select_optiresearch_sections(question, sections, max_sections=4)
+    if not selected_sections:
+        selected_sections = [{
+            'section_path': 'Document Overview',
+            'title_level': 0,
+            'content': context[:6000],
+            'score': 0,
+            'index': 0
+        }]
+
+    section_blocks = []
+    fallback_sources = []
+    for section in selected_sections:
+        fallback_sources.append(section['section_path'])
+        trimmed_content = section['content'][:3500]
+        section_blocks.append(
+            f"[Section: {section['section_path']}]\n{trimmed_content}"
+        )
+    selected_context = "\n\n".join(section_blocks)
+
+    prompt = f"""
+You are OptiResearch, an academic reading assistant.
+Answer the user's question strictly based on the provided survey sections.
+
+Rules:
+- If the answer is directly supported, answer clearly and concisely.
+- If the content is insufficient, say so explicitly instead of inventing details.
+- Choose sources only from the provided section paths.
+- Keep the answer under 220 words.
+- Return JSON only in this exact shape:
+  {{"answer":"...","sources":["Section A","Section B"]}}
+- Include 1 to 3 section paths in `sources` when evidence exists.
+
+Survey sections:
+{selected_context}
+
+User question:
+{question}
+"""
+
+    try:
+        client = getQwenClient()
+        raw_answer = generateResponse(client, prompt)
+        answer, citations = _parse_optiresearch_response(raw_answer, fallback_sources)
+    except Exception as e:
+        return JsonResponse({'error': f'OptiResearch failed to answer the question: {str(e)}'}, status=500)
+
+    return JsonResponse({
+        'success': True,
+        'survey_id': survey_id,
+        'answer': answer,
+        'citations': citations,
+        'matched_sections': [
+            {
+                'section_path': section['section_path'],
+                'score': section['score']
+            }
+            for section in selected_sections
+        ],
+        'source_path': source_path
+    })
 
 @csrf_exempt
 @timeout_handler(1800)  # 15分钟超时
