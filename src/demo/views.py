@@ -43,7 +43,7 @@ from django.core.files.storage import default_storage
 
 # from .parse import DocumentLoading
 from .asg_retriever import legal_pdf, process_pdf, query_embeddings_new_new, cleanup_retriever
-from .asg_generator import generate,generate_sentence_patterns, cleanup_openai_client
+from .asg_generator import generate, generate_sentence_patterns, cleanup_openai_client, getQwenClient, generateResponse
 from .asg_outline import OutlineGenerator,generateOutlineHTML_qwen, generateSurvey_qwen_new
 from .asg_clustername import generate_cluster_name_new
 from .postprocess import generate_references_section
