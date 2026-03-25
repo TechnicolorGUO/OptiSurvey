@@ -801,6 +801,119 @@ textarea {
     gap: 16px;
   }
 
+  .autoresearch-runtime {
+    padding: 18px;
+    border-radius: 20px;
+    background: linear-gradient(180deg, #fbfefb 0%, #f3faf4 100%);
+    border: 1px solid rgba(31, 106, 60, 0.12);
+    box-shadow: 0 14px 28px rgba(31, 106, 60, 0.06);
+  }
+
+  .autoresearch-runtime-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
+    margin-bottom: 12px;
+  }
+
+  .autoresearch-runtime-header h4 {
+    margin: 0;
+    font-size: 17px;
+    color: #214a32;
+  }
+
+  .autoresearch-runtime-header p {
+    margin: 4px 0 0;
+    color: #5d7767;
+    font-size: 13px;
+  }
+
+  .autoresearch-progress-track {
+    width: 100%;
+    height: 10px;
+    border-radius: 999px;
+    background: #e2eee5;
+    overflow: hidden;
+  }
+
+  .autoresearch-progress-fill {
+    width: 0%;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #3da965 0%, #74ca8d 100%);
+    transition: width 0.25s ease;
+  }
+
+  .autoresearch-agent-list {
+    display: grid;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .autoresearch-agent-item {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr) 70px;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(31, 106, 60, 0.08);
+  }
+
+  .autoresearch-agent-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .autoresearch-agent-icon.pending {
+    background: #e7edf2;
+    color: #5e7687;
+  }
+
+  .autoresearch-agent-icon.active {
+    background: #e8f5ec;
+    color: #2c9150;
+  }
+
+  .autoresearch-agent-icon.completed {
+    background: #28a745;
+    color: #fff;
+  }
+
+  .autoresearch-agent-icon.failed {
+    background: #d9534f;
+    color: #fff;
+  }
+
+  .autoresearch-agent-copy strong {
+    display: block;
+    color: #234635;
+    font-size: 13px;
+  }
+
+  .autoresearch-agent-copy span {
+    display: block;
+    margin-top: 4px;
+    color: #698172;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .autoresearch-agent-percent {
+    text-align: right;
+    color: #3b5f49;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
   .autoresearch-cycle-stack {
     display: grid;
     gap: 16px;
@@ -1224,7 +1337,7 @@ FONTS & ICONS
 							<div>
 								<span class="autoresearch-eyebrow">Multi-Cycle Prototype</span>
 								<h4>Cycle Stack</h4>
-								<p>Start from the generated survey review, run one cycle at a time, and stack each cycle as a collapsible research round. In manual mode the user decides whether to continue; in auto mode the agent stops after convergence or the max iteration cap.</p>
+								<p>Start from the generated survey review, run one cycle at a time, and stack each cycle as a collapsible research round. The agent now runs as a fully automatic sequence and stops after convergence or the max iteration cap.</p>
 							</div>
 							<div class="autoresearch-cycle-stats">
 								<div class="autoresearch-cycle-stat">
@@ -1263,13 +1376,6 @@ FONTS & ICONS
 						<div class="autoresearch-control-card">
 							<div class="autoresearch-control-grid">
 								<div class="autoresearch-field">
-									<label for="autoresearch-mode">Execution mode</label>
-									<select id="autoresearch-mode">
-										<option value="manual" selected>Manual continue</option>
-										<option value="auto">Agent auto-stop</option>
-									</select>
-								</div>
-								<div class="autoresearch-field">
 									<label for="autoresearch-idea-count">Brainstorming ideas</label>
 									<input id="autoresearch-idea-count" type="number" min="3" max="15" value="10" />
 								</div>
@@ -1282,12 +1388,25 @@ FONTS & ICONS
 									<input id="autoresearch-max-iterations" type="number" min="2" max="5" value="5" />
 								</div>
 								<button id="autoresearch-run" class="autoresearch-run" type="button" onclick="startAutoResearchSequence()" disabled>Start New</button>
-								<button id="autoresearch-continue" class="autoresearch-run autoresearch-run-secondary" type="button" onclick="continueAutoResearchSequence()" disabled>Continue</button>
 							</div>
-							<p class="autoresearch-note">Auto mode uses a convergence rule: force at least 2 cycles, then stop when shortlist overlap is high and score gain becomes small, or when `max iterations` is reached. In practice this should usually stop after 2 to 3 cycles.</p>
+							<p class="autoresearch-note">The sequence uses an auto-stop rule: force at least 2 cycles, then stop when shortlist overlap is high and score gain becomes small, or when `max iterations` is reached. In practice this should usually stop after 2 to 3 cycles.</p>
 						</div>
 
 						<div id="autoresearch-status" class="optiresearch-status">AutoResearch will unlock when survey text is available.</div>
+
+						<div id="autoresearch-runtime" class="autoresearch-runtime" style="display:none;">
+							<div class="autoresearch-runtime-header">
+								<div>
+									<h4>Live Agent Progress</h4>
+									<p id="autoresearch-runtime-message">Waiting to start.</p>
+								</div>
+								<span id="autoresearch-runtime-percent" class="autoresearch-score-pill">0%</span>
+							</div>
+							<div class="autoresearch-progress-track">
+								<div id="autoresearch-progress-fill" class="autoresearch-progress-fill"></div>
+							</div>
+							<div id="autoresearch-agent-list" class="autoresearch-agent-list"></div>
+						</div>
 
 						<div class="autoresearch-results">
 							<div id="autoresearch-empty" class="autoresearch-empty-state">
@@ -2039,7 +2158,8 @@ FONTS & ICONS
 		running: false,
 		lastResult: null,
 		cycleHistory: [],
-		mode: 'manual'
+		mode: 'auto',
+		currentOperationId: null
 	};
 
 	function escapeHtml(value) {
@@ -2067,11 +2187,10 @@ FONTS & ICONS
 	}
 
 	function syncAutoResearchControls() {
-		const modeSelect = document.getElementById('autoresearch-mode');
 		const ideaInput = document.getElementById('autoresearch-idea-count');
 		const candidateInput = document.getElementById('autoresearch-candidate-count');
 		const maxIterationsInput = document.getElementById('autoresearch-max-iterations');
-		autoResearchState.mode = modeSelect.value === 'auto' ? 'auto' : 'manual';
+		autoResearchState.mode = 'auto';
 		let ideaCount = Math.max(3, Math.min(15, parseInt(ideaInput.value, 10) || 10));
 		let candidateCount = Math.max(1, Math.min(10, parseInt(candidateInput.value, 10) || 3));
 		let maxIterations = Math.max(2, Math.min(5, parseInt(maxIterationsInput.value, 10) || 5));
@@ -2089,9 +2208,53 @@ FONTS & ICONS
 		document.getElementById('autoresearch-status').textContent = message;
 	}
 
+	function getAutoResearchAgentIcon(status) {
+		if (status === 'completed') {
+			return '&#10003;';
+		}
+		if (status === 'failed') {
+			return '!';
+		}
+		if (status === 'active') {
+			return '...';
+		}
+		return '&middot;';
+	}
+
+	function renderAutoResearchRuntime(progress = 0, message = 'Waiting to start.', stages = []) {
+		const runtime = document.getElementById('autoresearch-runtime');
+		const fill = document.getElementById('autoresearch-progress-fill');
+		const percent = document.getElementById('autoresearch-runtime-percent');
+		const runtimeMessage = document.getElementById('autoresearch-runtime-message');
+		const agentList = document.getElementById('autoresearch-agent-list');
+		runtime.style.display = 'block';
+		fill.style.width = `${Math.max(0, Math.min(100, progress || 0))}%`;
+		percent.textContent = `${Math.max(0, Math.min(100, progress || 0))}%`;
+		runtimeMessage.textContent = message || 'Running AutoResearch...';
+		agentList.innerHTML = (stages || []).map(stage => `
+			<div class="autoresearch-agent-item">
+				<span class="autoresearch-agent-icon ${escapeHtml(stage.status || 'pending')}">${getAutoResearchAgentIcon(stage.status)}</span>
+				<div class="autoresearch-agent-copy">
+					<strong>${escapeHtml(stage.label || 'Agent')}</strong>
+					<span>${escapeHtml(stage.task || 'Waiting to start')}</span>
+				</div>
+				<div class="autoresearch-agent-percent">${escapeHtml(stage.progress || 0)}%</div>
+			</div>
+		`).join('');
+	}
+
+	function hideAutoResearchRuntime() {
+		document.getElementById('autoresearch-runtime').style.display = 'none';
+		document.getElementById('autoresearch-progress-fill').style.width = '0%';
+		document.getElementById('autoresearch-runtime-percent').textContent = '0%';
+		document.getElementById('autoresearch-runtime-message').textContent = 'Waiting to start.';
+		document.getElementById('autoresearch-agent-list').innerHTML = '';
+	}
+
 	function clearAutoResearchResults() {
 		autoResearchState.lastResult = null;
 		autoResearchState.cycleHistory = [];
+		autoResearchState.currentOperationId = null;
 		document.getElementById('autoresearch-empty').style.display = 'block';
 		document.getElementById('autoresearch-content').style.display = 'none';
 		document.getElementById('autoresearch-sequence-summary').innerHTML = '';
@@ -2099,6 +2262,7 @@ FONTS & ICONS
 		document.getElementById('autoresearch-cycle-survey').textContent = optiResearchState.surveyId
 			? `Survey ${optiResearchState.surveyId}`
 			: 'No survey loaded';
+		hideAutoResearchRuntime();
 		updateAutoResearchActionButtons();
 	}
 
@@ -2122,28 +2286,41 @@ FONTS & ICONS
 
 	function updateAutoResearchActionButtons() {
 		const runButton = document.getElementById('autoresearch-run');
-		const continueButton = document.getElementById('autoresearch-continue');
 		const maxIterationsInput = document.getElementById('autoresearch-max-iterations');
 		const autoResearchEnabled = optiResearchState.enabled && optiResearchState.chatEnabled;
-		const maxIterations = Math.max(2, Math.min(5, parseInt(maxIterationsInput.value, 10) || 5));
-		const lastCycle = autoResearchState.cycleHistory.length
-			? autoResearchState.cycleHistory[autoResearchState.cycleHistory.length - 1].cycle
-			: null;
 
 		runButton.disabled = !autoResearchEnabled || autoResearchState.running;
 		maxIterationsInput.disabled = !autoResearchEnabled || autoResearchState.running;
-		continueButton.style.display = autoResearchState.mode === 'manual' ? 'inline-flex' : 'none';
-		continueButton.disabled = !(
-			autoResearchEnabled &&
-			!autoResearchState.running &&
-			autoResearchState.mode === 'manual' &&
-			lastCycle &&
-			(lastCycle.iteration || 0) < maxIterations
-		);
 	}
 
 	function buildBadge(label, className = 'autoresearch-card-tag') {
 		return `<span class="${className}">${escapeHtml(label)}</span>`;
+	}
+
+	async function pollAutoResearchOperation(operationId, progressUrl) {
+		autoResearchState.currentOperationId = operationId;
+		const resolvedProgressUrl = progressUrl || `/get_operation_progress/?operation_id=${encodeURIComponent(operationId)}`;
+
+		while (true) {
+			const response = await fetch(resolvedProgressUrl, {
+				cache: 'no-store',
+				headers: { 'Accept': 'application/json' }
+			});
+			const data = await response.json();
+			renderAutoResearchRuntime(data.progress || 0, data.message || 'Running AutoResearch...', data.agent_stages || []);
+
+			if (!response.ok || data.status === 'failed') {
+				autoResearchState.currentOperationId = null;
+				throw new Error(data.error || data.message || 'AutoResearch progress polling failed.');
+			}
+
+			if (data.status === 'completed') {
+				autoResearchState.currentOperationId = null;
+				return data.result;
+			}
+
+			await new Promise(resolve => setTimeout(resolve, 1200));
+		}
 	}
 
 	function renderIdeaAccordion(idea) {
@@ -2308,12 +2485,10 @@ FONTS & ICONS
 
 		const latest = history[history.length - 1];
 		const latestCycle = latest.cycle || {};
-		const continueLabel = latestCycle.execution_mode === 'manual'
-			? 'Await user decision'
-			: (latestCycle.should_continue ? 'Continue suggested' : 'Stop suggested');
+		const continueLabel = latestCycle.should_continue ? 'Continue suggested' : 'Stop suggested';
 		sequenceSummary.innerHTML = `
 			<strong>Sequence Summary</strong><br>
-			Mode: ${escapeHtml(autoResearchState.mode)}. Completed ${history.length} cycle(s). Latest decision: ${escapeHtml(continueLabel)}. ${escapeHtml(latestCycle.stop_reason || '')}
+			Completed ${history.length} cycle(s). Latest decision: ${escapeHtml(continueLabel)}. ${escapeHtml(latestCycle.stop_reason || '')}
 		`;
 
 		stack.innerHTML = history.map((entry, index) => {
@@ -2327,12 +2502,8 @@ FONTS & ICONS
 				: 0;
 			const isLatest = index === history.length - 1;
 			const stopMetrics = cycle.stop_metrics || {};
-			const cycleDecisionLabel = cycle.execution_mode === 'manual'
-				? 'Await User'
-				: (cycle.should_continue ? 'Continue' : 'Stop');
-			const cycleDecisionClass = cycle.execution_mode === 'manual'
-				? 'autoresearch-chip'
-				: (cycle.should_continue ? 'autoresearch-chip' : 'autoresearch-rank-pill');
+			const cycleDecisionLabel = cycle.should_continue ? 'Continue' : 'Stop';
+			const cycleDecisionClass = cycle.should_continue ? 'autoresearch-chip' : 'autoresearch-rank-pill';
 
 			const ideasHtml = ideas.map(renderIdeaAccordion).join('');
 			const hypothesesHtml = hypotheses.map(hypothesis => renderHypothesisAccordion(hypothesis, rankedHypotheses)).join('');
@@ -2346,7 +2517,7 @@ FONTS & ICONS
 							<p>${escapeHtml(cycle.review_summary || 'No review summary returned.')}</p>
 						</div>
 						<div class="autoresearch-cycle-badges">
-							${buildBadge((cycle.execution_mode || autoResearchState.mode).toUpperCase(), 'autoresearch-chip')}
+							${buildBadge('AUTO', 'autoresearch-chip')}
 							${buildBadge(`Top ${selectedCandidates.length}`, 'autoresearch-chip')}
 							${buildBadge(`Score ${topScore}/100`, 'autoresearch-score-pill')}
 							${buildBadge(cycleDecisionLabel, cycleDecisionClass)}
@@ -2395,10 +2566,8 @@ FONTS & ICONS
 		const sendButton = document.getElementById('optiresearch-send');
 		const chatStatus = document.getElementById('optiresearch-chat-status');
 		const autoRunButton = document.getElementById('autoresearch-run');
-		const autoContinueButton = document.getElementById('autoresearch-continue');
 		const autoIdeaInput = document.getElementById('autoresearch-idea-count');
 		const autoCandidateInput = document.getElementById('autoresearch-candidate-count');
-		const autoModeInput = document.getElementById('autoresearch-mode');
 
 		if (previousSurveyId && previousSurveyId !== optiResearchState.surveyId) {
 			clearAutoResearchResults();
@@ -2425,16 +2594,14 @@ FONTS & ICONS
 
 		const autoResearchEnabled = optiResearchState.enabled && optiResearchState.chatEnabled;
 		autoRunButton.disabled = !autoResearchEnabled || autoResearchState.running;
-		autoContinueButton.disabled = true;
 		autoIdeaInput.disabled = !autoResearchEnabled || autoResearchState.running;
 		autoCandidateInput.disabled = !autoResearchEnabled || autoResearchState.running;
-		autoModeInput.disabled = !autoResearchEnabled || autoResearchState.running;
 		if (!optiResearchState.enabled) {
 			setAutoResearchStatus('Waiting for LaTeX PDF.');
 		} else if (!optiResearchState.chatEnabled) {
 			setAutoResearchStatus('AutoResearch needs the survey text, not only the PDF preview.');
 		} else if (autoResearchState.running) {
-			setAutoResearchStatus(`Running ${autoResearchState.mode === 'auto' ? 'auto sequence' : 'cycle'} across brainstorming, hypothesis writing, and validation...`);
+			setAutoResearchStatus('Running auto sequence across brainstorming, hypothesis writing, and validation...');
 		} else if (autoResearchState.lastResult) {
 			setAutoResearchStatus('Latest AutoResearch cycle stack is ready for inspection.');
 		} else {
@@ -2611,7 +2778,7 @@ FONTS & ICONS
 		}
 	}
 
-	async function runAutoResearchCycleSequence({ continueExisting = false } = {}) {
+	async function runAutoResearchCycleSequence() {
 		if (!optiResearchState.enabled || !optiResearchState.chatEnabled || !optiResearchState.surveyId) {
 			return;
 		}
@@ -2620,11 +2787,9 @@ FONTS & ICONS
 		const ideaCount = parseInt(document.getElementById('autoresearch-idea-count').value, 10) || 10;
 		const candidateCount = parseInt(document.getElementById('autoresearch-candidate-count').value, 10) || 3;
 		const maxIterations = parseInt(document.getElementById('autoresearch-max-iterations').value, 10) || 5;
-		if (!continueExisting) {
-			clearAutoResearchResults();
-		}
+		clearAutoResearchResults();
 
-		let nextIteration = autoResearchState.cycleHistory.length + 1;
+		let nextIteration = 1;
 		autoResearchState.running = true;
 		switchOptiResearchTab('autoresearch');
 		setOptiResearchState({});
@@ -2641,17 +2806,18 @@ FONTS & ICONS
 						survey_id: optiResearchState.surveyId,
 						idea_count: ideaCount,
 						candidate_count: candidateCount,
-						execution_mode: autoResearchState.mode,
 						cycle_index: nextIteration,
 						max_iterations: maxIterations,
 						history: getAutoResearchHistoryPayload()
 					})
 				});
 
-				const data = await response.json();
+				const startData = await response.json();
 				if (!response.ok) {
-					throw new Error(data.error || 'AutoResearch request failed.');
+					throw new Error(startData.error || 'AutoResearch request failed.');
 				}
+				renderAutoResearchRuntime(2, `Cycle ${String(nextIteration).padStart(2, '0')} started. Launching agent pipeline...`, []);
+				const data = await pollAutoResearchOperation(startData.operation_id, startData.progress_url);
 
 				autoResearchState.lastResult = data;
 				autoResearchState.cycleHistory.push(data);
@@ -2659,7 +2825,7 @@ FONTS & ICONS
 				document.getElementById('autoresearch-cycle-survey').textContent = data.survey_title || `Survey ${optiResearchState.surveyId || ''}`;
 				setAutoResearchStatus(`Cycle ${String(nextIteration).padStart(2, '0')} completed. ${data.cycle && data.cycle.stop_reason ? data.cycle.stop_reason : ''}`);
 
-				if (autoResearchState.mode !== 'auto' || !data.cycle || !data.cycle.should_continue) {
+				if (!data.cycle || !data.cycle.should_continue) {
 					break;
 				}
 
@@ -2667,18 +2833,20 @@ FONTS & ICONS
 			}
 		} catch (error) {
 			setAutoResearchStatus(`AutoResearch failed: ${error.message}`);
+			renderAutoResearchRuntime(100, `AutoResearch failed: ${error.message}`, [
+				{ label: 'Brainstorming Agent', status: 'failed', progress: 100, task: 'Execution interrupted' },
+				{ label: 'Hypothesis Agent', status: 'failed', progress: 100, task: 'Execution interrupted' },
+				{ label: 'Validation Agent', status: 'failed', progress: 100, task: 'Execution interrupted' }
+			]);
 		} finally {
 			autoResearchState.running = false;
+			autoResearchState.currentOperationId = null;
 			setOptiResearchState({});
 		}
 	}
 
 	function startAutoResearchSequence() {
-		runAutoResearchCycleSequence({ continueExisting: false });
-	}
-
-	function continueAutoResearchSequence() {
-		runAutoResearchCycleSequence({ continueExisting: true });
+		runAutoResearchCycleSequence();
 	}
 
 	document.addEventListener('DOMContentLoaded', function() {
@@ -2695,7 +2863,6 @@ FONTS & ICONS
 
 		document.getElementById('autoresearch-idea-count').addEventListener('input', syncAutoResearchControls);
 		document.getElementById('autoresearch-candidate-count').addEventListener('input', syncAutoResearchControls);
-		document.getElementById('autoresearch-mode').addEventListener('change', syncAutoResearchControls);
 		document.getElementById('autoresearch-max-iterations').addEventListener('input', syncAutoResearchControls);
 
 		document.getElementById('optiresearch-shell').addEventListener('click', function(event) {

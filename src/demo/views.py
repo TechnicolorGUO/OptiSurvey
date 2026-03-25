@@ -244,13 +244,15 @@ def timeout_handler(seconds):
 # 添加进度跟踪
 progress_tracker = {}
 
-def update_progress(operation_id, progress, message=""):
+def update_progress(operation_id, progress, message="", meta=None):
     """更新操作进度"""
     progress_tracker[operation_id] = {
         'progress': progress,
         'message': message,
         'timestamp': time.time()
     }
+    if isinstance(meta, dict):
+        progress_tracker[operation_id].update(meta)
     print(f"[{operation_id}] {progress}% - {message}")
 
 def get_progress(operation_id):
@@ -281,6 +283,7 @@ def get_operation_progress(request):
                 # 任务完成，返回结果
                 print(f"[DEBUG] Task {operation_id} completed, returning result")
                 result = task_status.get('result')
+                progress_info = get_progress(operation_id)
                 
                 # 检查result是否是HttpResponse对象（旧的PDF生成方式）
                 if hasattr(result, 'content'):
@@ -288,6 +291,7 @@ def get_operation_progress(request):
                         import json
                         content = json.loads(result.content.decode('utf-8'))
                         return no_cache_json_response({
+                            **progress_info,
                             'progress': 100,
                             'message': 'Task completed successfully!',
                             'status': 'completed',
@@ -297,6 +301,7 @@ def get_operation_progress(request):
                         print(f"[DEBUG] Error parsing HttpResponse content: {e}")
                         # 对于PDF等二进制文件，我们不解析内容，只返回完成状态
                         return no_cache_json_response({
+                            **progress_info,
                             'progress': 100,
                             'message': 'Task completed successfully!',
                             'status': 'completed',
@@ -308,6 +313,7 @@ def get_operation_progress(request):
                         import json
                         content = json.loads(result.content.decode('utf-8'))
                         return no_cache_json_response({
+                            **progress_info,
                             'progress': 100,
                             'message': 'Task completed successfully!',
                             'status': 'completed',
@@ -316,6 +322,7 @@ def get_operation_progress(request):
                     except Exception as e:
                         print(f"[DEBUG] Error parsing JsonResponse content: {e}")
                         return no_cache_json_response({
+                            **progress_info,
                             'progress': 100,
                             'message': 'Task completed successfully!',
                             'status': 'completed'
@@ -323,6 +330,7 @@ def get_operation_progress(request):
                 else:
                     # 普通的结果对象
                     return no_cache_json_response({
+                        **progress_info,
                         'progress': 100,
                         'message': 'Task completed successfully!',
                         'status': 'completed',
@@ -331,7 +339,9 @@ def get_operation_progress(request):
             elif task_status['status'] == 'failed':
                 # 任务失败
                 print(f"[DEBUG] Task {operation_id} failed: {task_status.get('error')}")
+                progress_info = get_progress(operation_id)
                 return no_cache_json_response({
+                    **progress_info,
                     'progress': -1,
                     'message': f"Task failed: {task_status.get('error', 'Unknown error')}",
                     'status': 'failed',
@@ -1201,7 +1211,7 @@ def _compute_autoresearch_stop_decision(selected_candidates, history, cycle_inde
         overlap_scores.append(best_overlap)
     average_overlap = sum(overlap_scores) / max(1, len(overlap_scores)) if overlap_scores else 0.0
 
-    minimum_cycles_before_stop = 2 if execution_mode == 'auto' else 1
+    minimum_cycles_before_stop = 2
     stop_votes = 0
     reasons = []
 
@@ -1238,9 +1248,6 @@ def _compute_autoresearch_stop_decision(selected_candidates, history, cycle_inde
     if cycle_index < minimum_cycles_before_stop:
         should_continue = True
         stop_reason = f'Force at least {minimum_cycles_before_stop} cycles before stopping.'
-    elif execution_mode == 'manual':
-        should_continue = False
-        stop_reason = 'Manual mode waits for user confirmation before continuing.'
     else:
         should_continue = stop_votes < 2
         if should_continue:
@@ -1259,6 +1266,40 @@ def _compute_autoresearch_stop_decision(selected_candidates, history, cycle_inde
             'agent_recommendation': normalized_agent_recommendation or 'n/a',
         }
     }
+
+def _autoresearch_stage_snapshot(brainstorming_status='pending', hypothesis_status='pending', validation_status='pending',
+                                 brainstorming_task='Waiting to start',
+                                 hypothesis_task='Waiting to start',
+                                 validation_task='Waiting to start'):
+    stage_progress = {
+        'pending': 0,
+        'active': 55,
+        'completed': 100,
+        'failed': 100,
+    }
+    return [
+        {
+            'key': 'brainstorming',
+            'label': 'Brainstorming Agent',
+            'status': brainstorming_status,
+            'progress': stage_progress.get(brainstorming_status, 0),
+            'task': brainstorming_task,
+        },
+        {
+            'key': 'hypothesis',
+            'label': 'Hypothesis Agent',
+            'status': hypothesis_status,
+            'progress': stage_progress.get(hypothesis_status, 0),
+            'task': hypothesis_task,
+        },
+        {
+            'key': 'validation',
+            'label': 'Validation Agent',
+            'status': validation_status,
+            'progress': stage_progress.get(validation_status, 0),
+            'task': validation_task,
+        },
+    ]
 
 @csrf_exempt
 def get_optiresearch_state(request):
@@ -1376,7 +1417,19 @@ User question:
 
 @csrf_exempt
 @timeout_handler(900)
-def run_autoresearch(request):
+def run_autoresearch_sync(request, operation_id=None):
+    operation_id = operation_id or getattr(request, 'operation_id', f"autoresearch_{int(time.time())}")
+    update_progress(
+        operation_id,
+        5,
+        "Preparing AutoResearch cycle...",
+        {
+            'agent_stages': _autoresearch_stage_snapshot(
+                brainstorming_status='active',
+                brainstorming_task='Preparing survey context',
+            )
+        }
+    )
     if request.method != 'POST':
         return JsonResponse({'error': 'Invalid request method'}, status=405)
 
@@ -1386,9 +1439,7 @@ def run_autoresearch(request):
         return JsonResponse({'error': 'Invalid JSON payload'}, status=400)
 
     survey_id = str(data.get('survey_id', '')).strip()
-    execution_mode = str(data.get('execution_mode', 'manual')).strip().lower()
-    if execution_mode not in {'manual', 'auto'}:
-        execution_mode = 'manual'
+    execution_mode = 'auto'
     cycle_index = _coerce_positive_int(data.get('cycle_index', 1), default_value=1, min_value=1, max_value=20)
     max_iterations = _coerce_positive_int(data.get('max_iterations', 5), default_value=5, min_value=2, max_value=5)
     idea_count = _coerce_positive_int(data.get('idea_count', 10), default_value=10, min_value=3, max_value=15)
@@ -1407,6 +1458,19 @@ def run_autoresearch(request):
     citation_data_list = _load_autoresearch_citation_data(survey_id)
     autoresearch_context = _build_autoresearch_context(context)
     prior_cycle_digest = _build_prior_cycle_digest(history)
+    update_progress(
+        operation_id,
+        20,
+        "Brainstorming agent is generating ideas...",
+        {
+            'agent_stages': _autoresearch_stage_snapshot(
+                brainstorming_status='active',
+                brainstorming_task='Generating idea pool from review',
+                hypothesis_task='Queued behind idea generation',
+                validation_task='Waiting for structured hypotheses',
+            )
+        }
+    )
 
     brainstorming_prompt = f"""
 You are the Brainstorming Agent in AutoResearch.
@@ -1454,9 +1518,34 @@ Survey review context:
             idea['novelty_basis'] = str(idea.get('novelty_basis') or '').strip()
             idea['why_now'] = str(idea.get('why_now') or '').strip()
     except Exception as e:
+        update_progress(
+            operation_id,
+            -1,
+            f"Brainstorming agent failed: {str(e)}",
+            {
+                'agent_stages': _autoresearch_stage_snapshot(
+                    brainstorming_status='failed',
+                    brainstorming_task=f'Failed: {str(e)}',
+                )
+            }
+        )
         return JsonResponse({'error': f'Brainstorming agent failed: {str(e)}'}, status=500)
 
     evidence_packs = _build_idea_evidence_packs(ideas, citation_data_list)
+    update_progress(
+        operation_id,
+        52,
+        "Hypothesis agent is structuring hypothesis cards...",
+        {
+            'agent_stages': _autoresearch_stage_snapshot(
+                brainstorming_status='completed',
+                brainstorming_task=f'Generated {len(ideas)} ideas',
+                hypothesis_status='active',
+                hypothesis_task='Converting ideas into fixed-schema cards',
+                validation_task='Waiting for scored candidates',
+            )
+        }
+    )
 
     hypothesis_prompt = f"""
 You are the Hypothesis Agent in AutoResearch.
@@ -1503,7 +1592,36 @@ Idea and evidence packs:
             raise ValueError('Hypothesis agent returned no hypotheses')
         hypotheses = _attach_hypothesis_evidence(hypotheses[:len(ideas)], evidence_packs)
     except Exception as e:
+        update_progress(
+            operation_id,
+            -1,
+            f"Hypothesis agent failed: {str(e)}",
+            {
+                'agent_stages': _autoresearch_stage_snapshot(
+                    brainstorming_status='completed',
+                    brainstorming_task=f'Generated {len(ideas)} ideas',
+                    hypothesis_status='failed',
+                    hypothesis_task=f'Failed: {str(e)}',
+                )
+            }
+        )
         return JsonResponse({'error': f'Hypothesis agent failed: {str(e)}'}, status=500)
+
+    update_progress(
+        operation_id,
+        78,
+        "Validation agent is scoring and ranking candidates...",
+        {
+            'agent_stages': _autoresearch_stage_snapshot(
+                brainstorming_status='completed',
+                brainstorming_task=f'Generated {len(ideas)} ideas',
+                hypothesis_status='completed',
+                hypothesis_task=f'Built {len(hypotheses)} hypothesis cards',
+                validation_status='active',
+                validation_task='Ranking and deciding whether to continue',
+            )
+        }
+    )
 
     validation_prompt = f"""
 You are the Validation Agent in AutoResearch, acting as a rigorous reviewer.
@@ -1576,6 +1694,21 @@ Max iterations: {max_iterations}
         if not selected_candidates:
             selected_candidates = merged_rankings[:candidate_count]
     except Exception as e:
+        update_progress(
+            operation_id,
+            -1,
+            f"Validation agent failed: {str(e)}",
+            {
+                'agent_stages': _autoresearch_stage_snapshot(
+                    brainstorming_status='completed',
+                    brainstorming_task=f'Generated {len(ideas)} ideas',
+                    hypothesis_status='completed',
+                    hypothesis_task=f'Built {len(hypotheses)} hypothesis cards',
+                    validation_status='failed',
+                    validation_task=f'Failed: {str(e)}',
+                )
+            }
+        )
         return JsonResponse({'error': f'Validation agent failed: {str(e)}'}, status=500)
 
     stop_decision = _compute_autoresearch_stop_decision(
@@ -1588,7 +1721,7 @@ Max iterations: {max_iterations}
         continue_reason
     )
 
-    return JsonResponse({
+    result_payload = {
         'success': True,
         'survey_id': survey_id,
         'survey_title': survey_title,
@@ -1611,6 +1744,45 @@ Max iterations: {max_iterations}
             'stop_reason': stop_decision['stop_reason'],
             'stop_metrics': stop_decision['stop_metrics'],
         }
+    }
+    update_progress(
+        operation_id,
+        100,
+        f"Cycle {cycle_index} completed successfully.",
+        {
+            'agent_stages': _autoresearch_stage_snapshot(
+                brainstorming_status='completed',
+                brainstorming_task=f'Generated {len(ideas)} ideas',
+                hypothesis_status='completed',
+                hypothesis_task=f'Built {len(hypotheses)} hypothesis cards',
+                validation_status='completed',
+                validation_task=f"Selected {len(selected_candidates)} candidates",
+            )
+        }
+    )
+    return JsonResponse(result_payload)
+
+@csrf_exempt
+def run_autoresearch(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+    operation_id = f"autoresearch_{int(time.time())}"
+    request.operation_id = operation_id
+    success = task_manager.start_task(
+        operation_id,
+        run_autoresearch_sync,
+        request,
+        operation_id
+    )
+    if not success:
+        return JsonResponse({'error': 'AutoResearch task already running'}, status=409)
+
+    return JsonResponse({
+        'operation_id': operation_id,
+        'status': 'started',
+        'message': 'AutoResearch cycle started successfully. Use the operation_id to check progress.',
+        'progress_url': f'/get_operation_progress/?operation_id={operation_id}'
     })
 
 @csrf_exempt
