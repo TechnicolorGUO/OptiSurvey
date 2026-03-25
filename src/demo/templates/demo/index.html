@@ -2136,7 +2136,7 @@ function select_sections() {
 			const result = await response.json();
 			if (result.operation_id) {
 				// 轮询进度
-				await pollAsyncDownload(result.operation_id, 'pdf');
+				await pollAsyncDownload(result.operation_id, 'pdf', result.survey_id || (typeof survey_id !== 'undefined' ? survey_id : null));
 			} else {
 				hideUploadProgress();
 			}
@@ -2178,7 +2178,7 @@ function select_sections() {
 			}
 			const result = await response.json();
 			if (result.operation_id) {
-				await pollAsyncDownload(result.operation_id, 'latex');
+				await pollAsyncDownload(result.operation_id, 'latex', result.survey_id || (typeof survey_id !== 'undefined' ? survey_id : null));
 			} else {
 				hideUploadProgress();
 			}
@@ -2259,6 +2259,117 @@ function select_sections() {
 		hideUploadProgress();
 	}
 
+	function buildGeneratedPdfUrl(type, surveyId) {
+		return (type === 'pdf')
+			? `/static/data/results/survey_${surveyId}.pdf`
+			: `/static/data/results/survey_${surveyId}_latex.pdf`;
+	}
+
+	async function generatedPdfExists(type, surveyId) {
+		if (!surveyId) {
+			return false;
+		}
+
+		try {
+			const response = await fetch(buildGeneratedPdfUrl(type, surveyId), {
+				method: 'HEAD',
+				cache: 'no-store'
+			});
+			return response.ok;
+		} catch (error) {
+			return false;
+		}
+	}
+
+	function displayGeneratedPdf(type, surveyId) {
+		const downloadUrl = buildGeneratedPdfUrl(type, surveyId);
+		document.getElementById('pdf-preview-frame').src = downloadUrl;
+		document.getElementById('pdf-preview-section').style.display = 'block';
+
+		const downloadLink = document.getElementById('pdf-download-link');
+		downloadLink.href = downloadUrl;
+		downloadLink.style.display = 'inline-block';
+		downloadLink.download = (type === 'pdf')
+			? `survey_${surveyId}.pdf`
+			: `survey_${surveyId}_latex.pdf`;
+
+		document.getElementById('pdf-preview-section').scrollIntoView({ behavior: 'smooth' });
+	}
+
+	async function pollAsyncDownload(operationId, type, fallbackSurveyId = null) {
+		let status = 'running';
+		let consecutiveFailures = 0;
+
+		while (status === 'running') {
+			await new Promise(r => setTimeout(r, 2000));
+
+			try {
+				const progressUrl = `/get_operation_progress/?operation_id=${encodeURIComponent(operationId)}&_=${Date.now()}`;
+				const res = await fetch(progressUrl, {
+					cache: 'no-store',
+					headers: {
+						'Accept': 'application/json'
+					}
+				});
+
+				if (!res.ok) {
+					throw new Error(`Progress request failed with status ${res.status}`);
+				}
+
+				const data = await res.json();
+				const progress = data.progress || 0;
+				const message = data.message || 'Processing...';
+				const surveyId = (data.result && data.result.survey_id) || fallbackSurveyId || (typeof survey_id !== 'undefined' ? survey_id : null);
+
+				status = data.status || 'running';
+				consecutiveFailures = 0;
+				updateProgressBar(progress, message);
+
+				if (status === 'completed' || (progress >= 100 && surveyId)) {
+					if (!surveyId) {
+						alert('PDF generation completed but survey_id is missing. Please refresh and try again.');
+						break;
+					}
+
+					updateProgressBar(100, 'PDF ready! Displaying in viewer...');
+					await new Promise(r => setTimeout(r, 500));
+					displayGeneratedPdf(type, surveyId);
+					break;
+				}
+
+				if (status === 'failed') {
+					alert('PDF generation failed: ' + (data.error || 'Unknown error'));
+					break;
+				}
+
+				if (status === 'not_found') {
+					if (surveyId && await generatedPdfExists(type, surveyId)) {
+						updateProgressBar(100, 'PDF ready! Displaying in viewer...');
+						await new Promise(r => setTimeout(r, 500));
+						displayGeneratedPdf(type, surveyId);
+						break;
+					}
+
+					updateProgressBar(progress || 5, 'Waiting for generation status...');
+				}
+			} catch (error) {
+				console.error('Progress polling error:', error);
+				consecutiveFailures += 1;
+
+				const surveyId = fallbackSurveyId || (typeof survey_id !== 'undefined' ? survey_id : null);
+				if (surveyId && await generatedPdfExists(type, surveyId)) {
+					updateProgressBar(100, 'PDF ready! Displaying in viewer...');
+					await new Promise(r => setTimeout(r, 500));
+					displayGeneratedPdf(type, surveyId);
+					break;
+				}
+
+				updateProgressBar(5, consecutiveFailures > 2 ? 'Still generating PDF...' : 'Unable to refresh progress, retrying...');
+			}
+		}
+
+		hideUploadProgress();
+	}
 </script>
 
 	<!-- 测试异步功能区域

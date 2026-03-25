@@ -1887,6 +1887,7 @@ def generate_pdf(request):
     """异步版本的PDF生成接口，避免Cloudflare 524超时"""
     if request.method == 'POST':
         operation_id = f"pdf_{int(time.time())}"
+        survey_id = request.POST.get('survey_id', '') or Global_survey_id
         request.operation_id = operation_id
         success = task_manager.start_task(
             operation_id,
@@ -1898,6 +1899,7 @@ def generate_pdf(request):
             return JsonResponse({'error': 'PDF generation task already running'}, status=409)
         return JsonResponse({
             'operation_id': operation_id,
+            'survey_id': survey_id,
             'status': 'started',
             'message': 'PDF generation started successfully. Use the operation_id to check progress.',
             'progress_url': f'/get_operation_progress/?operation_id={operation_id}'
@@ -2316,6 +2318,7 @@ def generate_pdf_from_tex(request):
     """异步版本的LaTeX PDF生成接口，避免Cloudflare 524超时"""
     if request.method == 'POST':
         operation_id = f"latex_{int(time.time())}"
+        survey_id = request.POST.get('survey_id', '') or Global_survey_id
         request.operation_id = operation_id
         success = task_manager.start_task(
             operation_id,
@@ -2327,6 +2330,7 @@ def generate_pdf_from_tex(request):
             return JsonResponse({'error': 'LaTeX PDF generation task already running'}, status=409)
         return JsonResponse({
             'operation_id': operation_id,
+            'survey_id': survey_id,
             'status': 'started',
             'message': 'LaTeX PDF generation started successfully. Use the operation_id to check progress.',
             'progress_url': f'/get_operation_progress/?operation_id={operation_id}'
