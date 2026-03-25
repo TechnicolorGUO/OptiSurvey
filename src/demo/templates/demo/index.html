@@ -762,6 +762,15 @@ textarea {
     background: #fbfdff;
   }
 
+  .autoresearch-field select {
+    width: 100%;
+    border: 1px solid rgba(13, 43, 69, 0.14);
+    border-radius: 14px;
+    padding: 12px 14px;
+    outline: none;
+    background: #fbfdff;
+  }
+
   .autoresearch-note {
     margin: 12px 0 0;
     color: #6b7e8d;
@@ -779,10 +788,119 @@ textarea {
     box-shadow: 0 14px 24px rgba(13, 43, 69, 0.18);
   }
 
+  .autoresearch-run-secondary {
+    background: linear-gradient(135deg, #f4f8fb 0%, #dfe8f0 100%);
+    color: #1f415b;
+    box-shadow: none;
+    border: 1px solid rgba(13, 43, 69, 0.12);
+  }
+
   .autoresearch-results {
     display: flex;
     flex-direction: column;
     gap: 16px;
+  }
+
+  .autoresearch-cycle-stack {
+    display: grid;
+    gap: 16px;
+  }
+
+  .autoresearch-cycle-card {
+    border-radius: 24px;
+    overflow: hidden;
+    background:
+      linear-gradient(135deg, rgba(13, 43, 69, 0.08) 0%, rgba(40, 90, 133, 0.12) 100%);
+    border: 1px solid rgba(13, 43, 69, 0.1);
+    box-shadow: 0 18px 36px rgba(18, 44, 72, 0.08);
+  }
+
+  .autoresearch-cycle-card[open] {
+    background:
+      linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
+    border-color: rgba(13, 43, 69, 0.08);
+  }
+
+  .autoresearch-cycle-summary {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 22px;
+    cursor: pointer;
+    background:
+      linear-gradient(135deg, rgba(13, 43, 69, 0.88) 0%, rgba(25, 70, 108, 0.78) 100%);
+    color: #fff;
+  }
+
+  .autoresearch-cycle-card[open] .autoresearch-cycle-summary {
+    background:
+      linear-gradient(135deg, #eef4f8 0%, #e4edf5 100%);
+    color: #173650;
+    border-bottom: 1px solid rgba(13, 43, 69, 0.08);
+  }
+
+  .autoresearch-cycle-summary::-webkit-details-marker,
+  .autoresearch-section-summary::-webkit-details-marker,
+  .autoresearch-card-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .autoresearch-cycle-title {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .autoresearch-cycle-title h4 {
+    margin: 0;
+    font-size: 18px;
+  }
+
+  .autoresearch-cycle-title p {
+    margin: 0;
+    font-size: 13px;
+    color: inherit;
+    opacity: 0.82;
+  }
+
+  .autoresearch-cycle-badges,
+  .autoresearch-summary-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .autoresearch-cycle-body {
+    padding: 18px;
+    display: grid;
+    gap: 14px;
+  }
+
+  .autoresearch-section-accordion {
+    border-radius: 20px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(13, 43, 69, 0.08);
+  }
+
+  .autoresearch-section-summary {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 16px 18px;
+    cursor: pointer;
+    background: linear-gradient(180deg, #f7fafc 0%, #edf3f8 100%);
+  }
+
+  .autoresearch-section-body {
+    padding: 16px 18px 18px;
+    display: grid;
+    gap: 12px;
   }
 
   .autoresearch-empty-state {
@@ -886,6 +1004,28 @@ textarea {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 14px;
+  }
+
+  .autoresearch-card-accordion {
+    border-radius: 18px;
+    overflow: hidden;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
+    border: 1px solid rgba(13, 43, 69, 0.08);
+    box-shadow: 0 12px 28px rgba(18, 44, 72, 0.06);
+  }
+
+  .autoresearch-card-summary {
+    list-style: none;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 18px;
+    cursor: pointer;
+  }
+
+  .autoresearch-card-body {
+    padding: 0 18px 18px;
   }
 
   .autoresearch-hypothesis-card {
@@ -1082,9 +1222,9 @@ FONTS & ICONS
 					<div class="autoresearch-panel">
 						<div class="autoresearch-cycle-banner">
 							<div>
-								<span class="autoresearch-eyebrow">Single Cycle Prototype</span>
-								<h4>Cycle 01</h4>
-								<p>Start from the generated survey review, let the brainstorming agent expand it into ideas, turn them into fixed-format hypothesis cards with literature grounding, and let a validation agent rank the strongest candidates.</p>
+								<span class="autoresearch-eyebrow">Multi-Cycle Prototype</span>
+								<h4>Cycle Stack</h4>
+								<p>Start from the generated survey review, run one cycle at a time, and stack each cycle as a collapsible research round. In manual mode the user decides whether to continue; in auto mode the agent stops after convergence or the max iteration cap.</p>
 							</div>
 							<div class="autoresearch-cycle-stats">
 								<div class="autoresearch-cycle-stat">
@@ -1093,11 +1233,11 @@ FONTS & ICONS
 								</div>
 								<div class="autoresearch-cycle-stat">
 									<strong id="autoresearch-cycle-idea-stat">n=10 ideas</strong>
-									<span>Brainstorming pool</span>
+									<span>Per cycle idea pool</span>
 								</div>
 								<div class="autoresearch-cycle-stat">
 									<strong id="autoresearch-cycle-candidate-stat">top 3 candidates</strong>
-									<span>Validation output</span>
+									<span>Per cycle shortlist</span>
 								</div>
 							</div>
 						</div>
@@ -1123,6 +1263,13 @@ FONTS & ICONS
 						<div class="autoresearch-control-card">
 							<div class="autoresearch-control-grid">
 								<div class="autoresearch-field">
+									<label for="autoresearch-mode">Execution mode</label>
+									<select id="autoresearch-mode">
+										<option value="manual" selected>Manual continue</option>
+										<option value="auto">Agent auto-stop</option>
+									</select>
+								</div>
+								<div class="autoresearch-field">
 									<label for="autoresearch-idea-count">Brainstorming ideas</label>
 									<input id="autoresearch-idea-count" type="number" min="3" max="15" value="10" />
 								</div>
@@ -1130,44 +1277,26 @@ FONTS & ICONS
 									<label for="autoresearch-candidate-count">Final candidates</label>
 									<input id="autoresearch-candidate-count" type="number" min="1" max="10" value="3" />
 								</div>
-								<button id="autoresearch-run" class="autoresearch-run" type="button" onclick="submitAutoResearchCycle()" disabled>Run Cycle</button>
+								<div class="autoresearch-field">
+									<label for="autoresearch-max-iterations">Max iterations</label>
+									<input id="autoresearch-max-iterations" type="number" min="2" max="5" value="5" />
+								</div>
+								<button id="autoresearch-run" class="autoresearch-run" type="button" onclick="startAutoResearchSequence()" disabled>Start New</button>
+								<button id="autoresearch-continue" class="autoresearch-run autoresearch-run-secondary" type="button" onclick="continueAutoResearchSequence()" disabled>Continue</button>
 							</div>
-							<p class="autoresearch-note">Minimal mode: brainstorming only expands the survey into ideas. Feasibility checking can be layered in later cycles.</p>
+							<p class="autoresearch-note">Auto mode uses a convergence rule: force at least 2 cycles, then stop when shortlist overlap is high and score gain becomes small, or when `max iterations` is reached. In practice this should usually stop after 2 to 3 cycles.</p>
 						</div>
 
 						<div id="autoresearch-status" class="optiresearch-status">AutoResearch will unlock when survey text is available.</div>
 
 						<div class="autoresearch-results">
 							<div id="autoresearch-empty" class="autoresearch-empty-state">
-								Run one cycle to generate an idea pool, structured hypothesis cards, and reviewer-ranked candidates.
+								Start a sequence to generate an idea pool, fixed-format hypothesis cards, and reviewer-ranked candidates for each stacked cycle.
 							</div>
 
 							<div id="autoresearch-content" style="display:none;">
-								<div class="autoresearch-section">
-									<div class="autoresearch-section-header">
-										<h4>1. Brainstorming Pool</h4>
-										<p id="autoresearch-ideas-meta">Ideas derived from the generated review.</p>
-									</div>
-									<div id="autoresearch-ideas" class="autoresearch-idea-list"></div>
-								</div>
-
-								<div class="autoresearch-section">
-									<div class="autoresearch-section-header">
-										<h4>2. Hypothesis Cards</h4>
-										<p id="autoresearch-hypotheses-meta">Template-locked cards generated by the hypothesis agent.</p>
-									</div>
-									<div id="autoresearch-hypotheses" class="autoresearch-hypothesis-grid"></div>
-								</div>
-
-								<div class="autoresearch-section">
-									<div class="autoresearch-section-header">
-										<h4>3. Validated Candidates</h4>
-										<p id="autoresearch-candidates-meta">Reviewer-ranked shortlist for this cycle.</p>
-									</div>
-									<div id="autoresearch-candidates" class="autoresearch-candidate-list"></div>
-								</div>
-
-								<div id="autoresearch-review-summary" class="autoresearch-review-summary"></div>
+								<div id="autoresearch-sequence-summary" class="autoresearch-review-summary"></div>
+								<div id="autoresearch-cycle-stack" class="autoresearch-cycle-stack"></div>
 							</div>
 						</div>
 					</div>
@@ -1908,7 +2037,9 @@ FONTS & ICONS
 	const autoResearchState = {
 		activeTab: 'chat',
 		running: false,
-		lastResult: null
+		lastResult: null,
+		cycleHistory: [],
+		mode: 'manual'
 	};
 
 	function escapeHtml(value) {
@@ -1936,16 +2067,22 @@ FONTS & ICONS
 	}
 
 	function syncAutoResearchControls() {
+		const modeSelect = document.getElementById('autoresearch-mode');
 		const ideaInput = document.getElementById('autoresearch-idea-count');
 		const candidateInput = document.getElementById('autoresearch-candidate-count');
+		const maxIterationsInput = document.getElementById('autoresearch-max-iterations');
+		autoResearchState.mode = modeSelect.value === 'auto' ? 'auto' : 'manual';
 		let ideaCount = Math.max(3, Math.min(15, parseInt(ideaInput.value, 10) || 10));
 		let candidateCount = Math.max(1, Math.min(10, parseInt(candidateInput.value, 10) || 3));
+		let maxIterations = Math.max(2, Math.min(5, parseInt(maxIterationsInput.value, 10) || 5));
 		candidateCount = Math.min(candidateCount, ideaCount);
 
 		ideaInput.value = ideaCount;
 		candidateInput.value = candidateCount;
+		maxIterationsInput.value = maxIterations;
 		document.getElementById('autoresearch-cycle-idea-stat').textContent = `n=${ideaCount} ideas`;
 		document.getElementById('autoresearch-cycle-candidate-stat').textContent = `top ${candidateCount} candidates`;
+		updateAutoResearchActionButtons();
 	}
 
 	function setAutoResearchStatus(message) {
@@ -1954,78 +2091,122 @@ FONTS & ICONS
 
 	function clearAutoResearchResults() {
 		autoResearchState.lastResult = null;
+		autoResearchState.cycleHistory = [];
 		document.getElementById('autoresearch-empty').style.display = 'block';
 		document.getElementById('autoresearch-content').style.display = 'none';
-		document.getElementById('autoresearch-ideas').innerHTML = '';
-		document.getElementById('autoresearch-hypotheses').innerHTML = '';
-		document.getElementById('autoresearch-candidates').innerHTML = '';
-		document.getElementById('autoresearch-review-summary').innerHTML = '';
-		document.getElementById('autoresearch-ideas-meta').textContent = 'Ideas derived from the generated review.';
-		document.getElementById('autoresearch-hypotheses-meta').textContent = 'Template-locked cards generated by the hypothesis agent.';
-		document.getElementById('autoresearch-candidates-meta').textContent = 'Reviewer-ranked shortlist for this cycle.';
+		document.getElementById('autoresearch-sequence-summary').innerHTML = '';
+		document.getElementById('autoresearch-cycle-stack').innerHTML = '';
 		document.getElementById('autoresearch-cycle-survey').textContent = optiResearchState.surveyId
 			? `Survey ${optiResearchState.surveyId}`
 			: 'No survey loaded';
+		updateAutoResearchActionButtons();
 	}
 
-	function renderAutoResearchIdeas(ideas) {
-		const container = document.getElementById('autoresearch-ideas');
-		container.innerHTML = ideas.map(idea => `
-			<div class="autoresearch-idea-item">
-				<div class="autoresearch-idea-item-header">
+	function getAutoResearchHistoryPayload() {
+		return autoResearchState.cycleHistory.map(entry => {
+			const cycle = entry.cycle || {};
+			return {
+				iteration: cycle.iteration,
+				selected_candidates: Array.isArray(cycle.selected_candidates)
+					? cycle.selected_candidates.map(candidate => ({
+						hypothesis_id: candidate.hypothesis_id,
+						title: candidate.title,
+						hypothesis_statement: candidate.hypothesis_statement,
+						total_score: candidate.total_score
+					}))
+					: [],
+				stop_metrics: cycle.stop_metrics || {}
+			};
+		});
+	}
+
+	function updateAutoResearchActionButtons() {
+		const runButton = document.getElementById('autoresearch-run');
+		const continueButton = document.getElementById('autoresearch-continue');
+		const maxIterationsInput = document.getElementById('autoresearch-max-iterations');
+		const autoResearchEnabled = optiResearchState.enabled && optiResearchState.chatEnabled;
+		const maxIterations = Math.max(2, Math.min(5, parseInt(maxIterationsInput.value, 10) || 5));
+		const lastCycle = autoResearchState.cycleHistory.length
+			? autoResearchState.cycleHistory[autoResearchState.cycleHistory.length - 1].cycle
+			: null;
+
+		runButton.disabled = !autoResearchEnabled || autoResearchState.running;
+		maxIterationsInput.disabled = !autoResearchEnabled || autoResearchState.running;
+		continueButton.style.display = autoResearchState.mode === 'manual' ? 'inline-flex' : 'none';
+		continueButton.disabled = !(
+			autoResearchEnabled &&
+			!autoResearchState.running &&
+			autoResearchState.mode === 'manual' &&
+			lastCycle &&
+			(lastCycle.iteration || 0) < maxIterations
+		);
+	}
+
+	function buildBadge(label, className = 'autoresearch-card-tag') {
+		return `<span class="${className}">${escapeHtml(label)}</span>`;
+	}
+
+	function renderIdeaAccordion(idea) {
+		return `
+			<details class="autoresearch-card-accordion">
+				<summary class="autoresearch-card-summary">
 					<div>
 						<span class="autoresearch-chip">${escapeHtml(idea.id || 'Idea')}</span>
 						<h5>${escapeHtml(idea.title || 'Untitled idea')}</h5>
 					</div>
+					<div class="autoresearch-summary-badges">
+						${buildBadge('Brainstorm', 'autoresearch-chip')}
+					</div>
+				</summary>
+				<div class="autoresearch-card-body">
+					<div class="autoresearch-idea-copy">${escapeHtml(idea.core_insight || 'No summary returned.')}</div>
+					<div class="autoresearch-card-section">
+						<strong>Novelty Basis</strong>
+						<p>${escapeHtml(idea.novelty_basis || 'Not specified.')}</p>
+					</div>
+					<div class="autoresearch-card-section">
+						<strong>Why Now</strong>
+						<p>${escapeHtml(idea.why_now || 'Not specified.')}</p>
+					</div>
 				</div>
-				<div class="autoresearch-idea-copy">${escapeHtml(idea.core_insight || 'No summary returned.')}</div>
-				<div class="autoresearch-card-section">
-					<strong>Novelty Basis</strong>
-					<p>${escapeHtml(idea.novelty_basis || 'Not specified.')}</p>
-				</div>
-				<div class="autoresearch-card-section">
-					<strong>Why Now</strong>
-					<p>${escapeHtml(idea.why_now || 'Not specified.')}</p>
-				</div>
-			</div>
-		`).join('');
+			</details>
+		`;
 	}
 
-	function renderAutoResearchHypotheses(hypotheses, rankings) {
+	function renderHypothesisAccordion(hypothesis, rankings) {
 		const rankingMap = {};
 		(rankings || []).forEach(item => {
 			rankingMap[item.hypothesis_id] = item;
 		});
+		const ranking = rankingMap[hypothesis.hypothesis_id] || {};
+		const citedPapers = Array.isArray(hypothesis.cited_papers) ? hypothesis.cited_papers : [];
+		const evidenceSnippets = Array.isArray(hypothesis.evidence_snippets) ? hypothesis.evidence_snippets : [];
+		const tagsHtml = citedPapers.length
+			? `<div class="autoresearch-card-tags">${citedPapers.map(paper => `<span class="autoresearch-card-tag">${escapeHtml(paper)}</span>`).join('')}</div>`
+			: '';
+		const evidenceHtml = evidenceSnippets.length
+			? `<div class="autoresearch-evidence-list">${evidenceSnippets.map(item => `
+				<div class="autoresearch-evidence-item">
+					<strong>${escapeHtml(item.source || 'Uploaded paper')}</strong>
+					<span>${escapeHtml(item.content || '')}</span>
+				</div>
+			`).join('')}</div>`
+			: '';
 
-		const container = document.getElementById('autoresearch-hypotheses');
-		container.innerHTML = hypotheses.map(hypothesis => {
-			const ranking = rankingMap[hypothesis.hypothesis_id] || {};
-			const citedPapers = Array.isArray(hypothesis.cited_papers) ? hypothesis.cited_papers : [];
-			const evidenceSnippets = Array.isArray(hypothesis.evidence_snippets) ? hypothesis.evidence_snippets : [];
-			const tagsHtml = citedPapers.length
-				? `<div class="autoresearch-card-tags">${citedPapers.map(paper => `<span class="autoresearch-card-tag">${escapeHtml(paper)}</span>`).join('')}</div>`
-				: '';
-			const evidenceHtml = evidenceSnippets.length
-				? `<div class="autoresearch-evidence-list">${evidenceSnippets.map(item => `
-					<div class="autoresearch-evidence-item">
-						<strong>${escapeHtml(item.source || 'Uploaded paper')}</strong>
-						<span>${escapeHtml(item.content || '')}</span>
+		return `
+			<details class="autoresearch-card-accordion">
+				<summary class="autoresearch-card-summary">
+					<div>
+						<span class="autoresearch-chip">${escapeHtml(hypothesis.hypothesis_id || 'Hypothesis')}</span>
+						<h5>${escapeHtml(hypothesis.title || 'Untitled hypothesis')}</h5>
 					</div>
-				`).join('')}</div>`
-				: '';
-
-			return `
-				<div class="autoresearch-hypothesis-card">
-					<div class="autoresearch-hypothesis-card-header">
-						<div>
-							<span class="autoresearch-chip">${escapeHtml(hypothesis.hypothesis_id || 'Hypothesis')}</span>
-							<h5>${escapeHtml(hypothesis.title || 'Untitled hypothesis')}</h5>
-						</div>
-						<div>
-							${ranking.rank ? `<span class="autoresearch-rank-pill">#${escapeHtml(ranking.rank)}</span>` : ''}
-							${ranking.total_score !== undefined ? `<span class="autoresearch-score-pill">${escapeHtml(ranking.total_score)}/100</span>` : ''}
-						</div>
+					<div class="autoresearch-summary-badges">
+						${ranking.rank ? `<span class="autoresearch-rank-pill">#${escapeHtml(ranking.rank)}</span>` : ''}
+						${ranking.total_score !== undefined ? `<span class="autoresearch-score-pill">${escapeHtml(ranking.total_score)}/100</span>` : ''}
+						${citedPapers.length ? buildBadge(`${citedPapers.length} refs`) : ''}
 					</div>
+				</summary>
+				<div class="autoresearch-card-body">
 					<div class="autoresearch-card-section">
 						<strong>Research Gap</strong>
 						<p>${escapeHtml(hypothesis.research_gap || 'Not specified.')}</p>
@@ -2053,31 +2234,32 @@ FONTS & ICONS
 					${tagsHtml}
 					${evidenceHtml}
 				</div>
-			`;
-		}).join('');
+			</details>
+		`;
 	}
 
-	function renderAutoResearchCandidates(candidates) {
-		const container = document.getElementById('autoresearch-candidates');
-		container.innerHTML = candidates.map(candidate => {
-			const metrics = [
-				['Novelty', candidate.novelty],
-				['Grounding', candidate.literature_grounding],
-				['Clarity', candidate.clarity],
-				['Impact', candidate.potential_impact]
-			].filter(([, value]) => value !== undefined && value !== null)
-				.map(([label, value]) => `<span class="autoresearch-card-tag">${escapeHtml(label)} ${escapeHtml(value)}</span>`)
-				.join('');
+	function renderCandidateAccordion(candidate) {
+		const metrics = [
+			['Novelty', candidate.novelty],
+			['Grounding', candidate.literature_grounding],
+			['Clarity', candidate.clarity],
+			['Impact', candidate.potential_impact]
+		].filter(([, value]) => value !== undefined && value !== null)
+			.map(([label, value]) => `<span class="autoresearch-card-tag">${escapeHtml(label)} ${escapeHtml(value)}</span>`)
+			.join('');
 
-			return `
-				<div class="autoresearch-candidate-card">
-					<div class="autoresearch-candidate-header">
-						<div>
-							<span class="autoresearch-rank-pill">#${escapeHtml(candidate.rank || '')} Candidate</span>
-							<h5>${escapeHtml(candidate.title || 'Untitled candidate')}</h5>
-						</div>
+		return `
+			<details class="autoresearch-card-accordion">
+				<summary class="autoresearch-card-summary">
+					<div>
+						<span class="autoresearch-rank-pill">#${escapeHtml(candidate.rank || '')} Candidate</span>
+						<h5>${escapeHtml(candidate.title || 'Untitled candidate')}</h5>
+					</div>
+					<div class="autoresearch-summary-badges">
 						<span class="autoresearch-score-pill">${escapeHtml(candidate.total_score || 0)}/100</span>
 					</div>
+				</summary>
+				<div class="autoresearch-card-body">
 					<div class="autoresearch-candidate-copy">${escapeHtml(candidate.hypothesis_statement || 'No candidate statement returned.')}</div>
 					<div class="autoresearch-card-section">
 						<strong>Reviewer Summary</strong>
@@ -2085,33 +2267,107 @@ FONTS & ICONS
 					</div>
 					<div class="autoresearch-card-tags">${metrics}</div>
 				</div>
-			`;
-		}).join('');
+			</details>
+		`;
 	}
 
-	function renderAutoResearchCycle(data) {
-		const cycle = data.cycle || {};
-		const ideas = Array.isArray(cycle.ideas) ? cycle.ideas : [];
-		const hypotheses = Array.isArray(cycle.hypotheses) ? cycle.hypotheses : [];
-		const rankedHypotheses = Array.isArray(cycle.ranked_hypotheses) ? cycle.ranked_hypotheses : [];
-		const selectedCandidates = Array.isArray(cycle.selected_candidates) ? cycle.selected_candidates : [];
+	function renderCycleSection(title, subtitle, countLabel, bodyHtml) {
+		return `
+			<details class="autoresearch-section-accordion">
+				<summary class="autoresearch-section-summary">
+					<div>
+						<h4>${escapeHtml(title)}</h4>
+						<p>${escapeHtml(subtitle)}</p>
+					</div>
+					<div class="autoresearch-summary-badges">
+						${buildBadge(countLabel, 'autoresearch-chip')}
+					</div>
+				</summary>
+				<div class="autoresearch-section-body">
+					${bodyHtml}
+				</div>
+			</details>
+		`;
+	}
 
-		autoResearchState.lastResult = data;
+	function renderAutoResearchSequence() {
+		const sequenceSummary = document.getElementById('autoresearch-sequence-summary');
+		const stack = document.getElementById('autoresearch-cycle-stack');
+		const history = autoResearchState.cycleHistory;
+
+		if (!history.length) {
+			document.getElementById('autoresearch-empty').style.display = 'block';
+			document.getElementById('autoresearch-content').style.display = 'none';
+			sequenceSummary.innerHTML = '';
+			stack.innerHTML = '';
+			return;
+		}
+
 		document.getElementById('autoresearch-empty').style.display = 'none';
 		document.getElementById('autoresearch-content').style.display = 'block';
-		document.getElementById('autoresearch-cycle-survey').textContent = data.survey_title || `Survey ${optiResearchState.surveyId || ''}`;
-		document.getElementById('autoresearch-ideas-meta').textContent = `${ideas.length} ideas generated from the survey review.`;
-		document.getElementById('autoresearch-hypotheses-meta').textContent = `${hypotheses.length} fixed-format cards generated${cycle.citation_pool_size ? ` with ${cycle.citation_pool_size} citation snippets available` : ''}.`;
-		document.getElementById('autoresearch-candidates-meta').textContent = `${selectedCandidates.length} shortlisted candidates after reviewer ranking.`;
 
-		renderAutoResearchIdeas(ideas);
-		renderAutoResearchHypotheses(hypotheses, rankedHypotheses);
-		renderAutoResearchCandidates(selectedCandidates);
-
-		document.getElementById('autoresearch-review-summary').innerHTML = `
-			<strong>Validation Summary</strong><br>
-			${escapeHtml(cycle.review_summary || 'No reviewer summary returned.')}
+		const latest = history[history.length - 1];
+		const latestCycle = latest.cycle || {};
+		const continueLabel = latestCycle.execution_mode === 'manual'
+			? 'Await user decision'
+			: (latestCycle.should_continue ? 'Continue suggested' : 'Stop suggested');
+		sequenceSummary.innerHTML = `
+			<strong>Sequence Summary</strong><br>
+			Mode: ${escapeHtml(autoResearchState.mode)}. Completed ${history.length} cycle(s). Latest decision: ${escapeHtml(continueLabel)}. ${escapeHtml(latestCycle.stop_reason || '')}
 		`;
+
+		stack.innerHTML = history.map((entry, index) => {
+			const cycle = entry.cycle || {};
+			const ideas = Array.isArray(cycle.ideas) ? cycle.ideas : [];
+			const hypotheses = Array.isArray(cycle.hypotheses) ? cycle.hypotheses : [];
+			const rankedHypotheses = Array.isArray(cycle.ranked_hypotheses) ? cycle.ranked_hypotheses : [];
+			const selectedCandidates = Array.isArray(cycle.selected_candidates) ? cycle.selected_candidates : [];
+			const topScore = selectedCandidates.length
+				? Math.max(...selectedCandidates.map(candidate => parseFloat(candidate.total_score || 0)))
+				: 0;
+			const isLatest = index === history.length - 1;
+			const stopMetrics = cycle.stop_metrics || {};
+			const cycleDecisionLabel = cycle.execution_mode === 'manual'
+				? 'Await User'
+				: (cycle.should_continue ? 'Continue' : 'Stop');
+			const cycleDecisionClass = cycle.execution_mode === 'manual'
+				? 'autoresearch-chip'
+				: (cycle.should_continue ? 'autoresearch-chip' : 'autoresearch-rank-pill');
+
+			const ideasHtml = ideas.map(renderIdeaAccordion).join('');
+			const hypothesesHtml = hypotheses.map(hypothesis => renderHypothesisAccordion(hypothesis, rankedHypotheses)).join('');
+			const candidatesHtml = selectedCandidates.map(renderCandidateAccordion).join('');
+
+			return `
+				<details class="autoresearch-cycle-card"${isLatest ? ' open' : ''}>
+					<summary class="autoresearch-cycle-summary">
+						<div class="autoresearch-cycle-title">
+							<h4>Cycle ${escapeHtml(String(cycle.iteration || (index + 1)).padStart(2, '0'))}</h4>
+							<p>${escapeHtml(cycle.review_summary || 'No review summary returned.')}</p>
+						</div>
+						<div class="autoresearch-cycle-badges">
+							${buildBadge((cycle.execution_mode || autoResearchState.mode).toUpperCase(), 'autoresearch-chip')}
+							${buildBadge(`Top ${selectedCandidates.length}`, 'autoresearch-chip')}
+							${buildBadge(`Score ${topScore}/100`, 'autoresearch-score-pill')}
+							${buildBadge(cycleDecisionLabel, cycleDecisionClass)}
+						</div>
+					</summary>
+					<div class="autoresearch-cycle-body">
+						<div class="autoresearch-review-summary">
+							<strong>Cycle Decision</strong><br>
+							${escapeHtml(cycle.stop_reason || 'No stop reason returned.')}
+							<br><br>
+							${buildBadge(`Gain ${stopMetrics.score_gain !== undefined ? stopMetrics.score_gain : 'n/a'}`)}
+							${buildBadge(`Overlap ${stopMetrics.average_overlap !== undefined ? stopMetrics.average_overlap : 'n/a'}`)}
+							${buildBadge(`Avg ${stopMetrics.avg_score !== undefined ? stopMetrics.avg_score : 'n/a'}`)}
+						</div>
+						${renderCycleSection('1. Brainstorming Pool', 'Ideas derived from the generated review.', `${ideas.length} ideas`, ideasHtml)}
+						${renderCycleSection('2. Hypothesis Cards', 'Template-locked cards generated by the hypothesis agent.', `${hypotheses.length} cards`, hypothesesHtml)}
+						${renderCycleSection('3. Review Results', 'Reviewer-ranked shortlist for this cycle.', `${selectedCandidates.length} shortlisted`, candidatesHtml)}
+					</div>
+				</details>
+			`;
+		}).join('');
 	}
 
 	function setOptiResearchState(nextState = {}) {
@@ -2139,8 +2395,10 @@ FONTS & ICONS
 		const sendButton = document.getElementById('optiresearch-send');
 		const chatStatus = document.getElementById('optiresearch-chat-status');
 		const autoRunButton = document.getElementById('autoresearch-run');
+		const autoContinueButton = document.getElementById('autoresearch-continue');
 		const autoIdeaInput = document.getElementById('autoresearch-idea-count');
 		const autoCandidateInput = document.getElementById('autoresearch-candidate-count');
+		const autoModeInput = document.getElementById('autoresearch-mode');
 
 		if (previousSurveyId && previousSurveyId !== optiResearchState.surveyId) {
 			clearAutoResearchResults();
@@ -2167,18 +2425,20 @@ FONTS & ICONS
 
 		const autoResearchEnabled = optiResearchState.enabled && optiResearchState.chatEnabled;
 		autoRunButton.disabled = !autoResearchEnabled || autoResearchState.running;
+		autoContinueButton.disabled = true;
 		autoIdeaInput.disabled = !autoResearchEnabled || autoResearchState.running;
 		autoCandidateInput.disabled = !autoResearchEnabled || autoResearchState.running;
+		autoModeInput.disabled = !autoResearchEnabled || autoResearchState.running;
 		if (!optiResearchState.enabled) {
 			setAutoResearchStatus('Waiting for LaTeX PDF.');
 		} else if (!optiResearchState.chatEnabled) {
 			setAutoResearchStatus('AutoResearch needs the survey text, not only the PDF preview.');
 		} else if (autoResearchState.running) {
-			setAutoResearchStatus('Running Cycle 01 across brainstorming, hypothesis writing, and validation...');
+			setAutoResearchStatus(`Running ${autoResearchState.mode === 'auto' ? 'auto sequence' : 'cycle'} across brainstorming, hypothesis writing, and validation...`);
 		} else if (autoResearchState.lastResult) {
-			setAutoResearchStatus('Latest AutoResearch cycle is ready for inspection.');
+			setAutoResearchStatus('Latest AutoResearch cycle stack is ready for inspection.');
 		} else {
-			setAutoResearchStatus('Ready to run one AutoResearch cycle on the current survey.');
+			setAutoResearchStatus('Ready to start a new AutoResearch sequence on the current survey.');
 		}
 
 		const chatLog = document.getElementById('optiresearch-chat-log');
@@ -2196,6 +2456,7 @@ FONTS & ICONS
 				: 'No survey loaded';
 		}
 		syncAutoResearchControls();
+		updateAutoResearchActionButtons();
 		updateOptiResearchPdfFrame();
 	}
 
@@ -2350,7 +2611,7 @@ FONTS & ICONS
 		}
 	}
 
-	async function submitAutoResearchCycle() {
+	async function runAutoResearchCycleSequence({ continueExisting = false } = {}) {
 		if (!optiResearchState.enabled || !optiResearchState.chatEnabled || !optiResearchState.surveyId) {
 			return;
 		}
@@ -2358,37 +2619,66 @@ FONTS & ICONS
 		syncAutoResearchControls();
 		const ideaCount = parseInt(document.getElementById('autoresearch-idea-count').value, 10) || 10;
 		const candidateCount = parseInt(document.getElementById('autoresearch-candidate-count').value, 10) || 3;
+		const maxIterations = parseInt(document.getElementById('autoresearch-max-iterations').value, 10) || 5;
+		if (!continueExisting) {
+			clearAutoResearchResults();
+		}
+
+		let nextIteration = autoResearchState.cycleHistory.length + 1;
 		autoResearchState.running = true;
 		switchOptiResearchTab('autoresearch');
 		setOptiResearchState({});
 
 		try {
-			const response = await fetch('/run_autoresearch/', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'X-CSRFToken': getCookie('csrftoken')
-				},
-				body: JSON.stringify({
-					survey_id: optiResearchState.surveyId,
-					idea_count: ideaCount,
-					candidate_count: candidateCount
-				})
-			});
+			while (nextIteration <= maxIterations) {
+				const response = await fetch('/run_autoresearch/', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'X-CSRFToken': getCookie('csrftoken')
+					},
+					body: JSON.stringify({
+						survey_id: optiResearchState.surveyId,
+						idea_count: ideaCount,
+						candidate_count: candidateCount,
+						execution_mode: autoResearchState.mode,
+						cycle_index: nextIteration,
+						max_iterations: maxIterations,
+						history: getAutoResearchHistoryPayload()
+					})
+				});
 
-			const data = await response.json();
-			if (!response.ok) {
-				throw new Error(data.error || 'AutoResearch request failed.');
+				const data = await response.json();
+				if (!response.ok) {
+					throw new Error(data.error || 'AutoResearch request failed.');
+				}
+
+				autoResearchState.lastResult = data;
+				autoResearchState.cycleHistory.push(data);
+				renderAutoResearchSequence();
+				document.getElementById('autoresearch-cycle-survey').textContent = data.survey_title || `Survey ${optiResearchState.surveyId || ''}`;
+				setAutoResearchStatus(`Cycle ${String(nextIteration).padStart(2, '0')} completed. ${data.cycle && data.cycle.stop_reason ? data.cycle.stop_reason : ''}`);
+
+				if (autoResearchState.mode !== 'auto' || !data.cycle || !data.cycle.should_continue) {
+					break;
+				}
+
+				nextIteration += 1;
 			}
-
-			renderAutoResearchCycle(data);
-			setAutoResearchStatus('Cycle 01 completed. Review the ranked candidates below.');
 		} catch (error) {
 			setAutoResearchStatus(`AutoResearch failed: ${error.message}`);
 		} finally {
 			autoResearchState.running = false;
 			setOptiResearchState({});
 		}
+	}
+
+	function startAutoResearchSequence() {
+		runAutoResearchCycleSequence({ continueExisting: false });
+	}
+
+	function continueAutoResearchSequence() {
+		runAutoResearchCycleSequence({ continueExisting: true });
 	}
 
 	document.addEventListener('DOMContentLoaded', function() {
@@ -2405,6 +2695,8 @@ FONTS & ICONS
 
 		document.getElementById('autoresearch-idea-count').addEventListener('input', syncAutoResearchControls);
 		document.getElementById('autoresearch-candidate-count').addEventListener('input', syncAutoResearchControls);
+		document.getElementById('autoresearch-mode').addEventListener('change', syncAutoResearchControls);
+		document.getElementById('autoresearch-max-iterations').addEventListener('input', syncAutoResearchControls);
 
 		document.getElementById('optiresearch-shell').addEventListener('click', function(event) {
 			if (event.target.id === 'optiresearch-shell') {

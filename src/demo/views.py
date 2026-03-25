@@ -1099,6 +1099,167 @@ def _coerce_positive_int(value, default_value, min_value=1, max_value=20):
         parsed = default_value
     return max(min_value, min(parsed, max_value))
 
+def _coerce_autoresearch_history(history):
+    if not isinstance(history, list):
+        return []
+
+    normalized_history = []
+    for index, cycle in enumerate(history, start=1):
+        if not isinstance(cycle, dict):
+            continue
+        selected_candidates = cycle.get('selected_candidates', [])
+        if not isinstance(selected_candidates, list):
+            selected_candidates = []
+        normalized_candidates = []
+        for candidate in selected_candidates:
+            if not isinstance(candidate, dict):
+                continue
+            normalized_candidates.append({
+                'hypothesis_id': str(candidate.get('hypothesis_id') or '').strip(),
+                'title': str(candidate.get('title') or '').strip(),
+                'hypothesis_statement': str(candidate.get('hypothesis_statement') or '').strip(),
+                'total_score': candidate.get('total_score'),
+            })
+
+        normalized_history.append({
+            'iteration': _coerce_positive_int(cycle.get('iteration', index), default_value=index, min_value=1, max_value=20),
+            'selected_candidates': normalized_candidates,
+            'stop_metrics': cycle.get('stop_metrics', {}),
+        })
+    return normalized_history
+
+def _flatten_history_candidates(history):
+    flattened = []
+    for cycle in history:
+        for candidate in cycle.get('selected_candidates', []):
+            if not isinstance(candidate, dict):
+                continue
+            flattened.append(candidate)
+    return flattened
+
+def _tokenize_autoresearch_text(value):
+    return set(re.findall(r'[a-zA-Z0-9][a-zA-Z0-9\-]{2,}', str(value or '').lower()))
+
+def _candidate_signature(candidate):
+    return " ".join([
+        str(candidate.get('title') or ''),
+        str(candidate.get('hypothesis_statement') or ''),
+    ]).strip()
+
+def _jaccard_similarity(left_text, right_text):
+    left_tokens = _tokenize_autoresearch_text(left_text)
+    right_tokens = _tokenize_autoresearch_text(right_text)
+    if not left_tokens or not right_tokens:
+        return 0.0
+    return len(left_tokens & right_tokens) / max(1, len(left_tokens | right_tokens))
+
+def _to_float(value, default_value=0.0):
+    try:
+        return float(value)
+    except Exception:
+        return default_value
+
+def _build_prior_cycle_digest(history):
+    digest = []
+    for cycle in history:
+        digest.append({
+            'iteration': cycle.get('iteration'),
+            'selected_candidates': [
+                {
+                    'hypothesis_id': candidate.get('hypothesis_id', ''),
+                    'title': candidate.get('title', ''),
+                    'hypothesis_statement': candidate.get('hypothesis_statement', ''),
+                    'total_score': candidate.get('total_score'),
+                }
+                for candidate in cycle.get('selected_candidates', [])
+            ]
+        })
+    return digest
+
+def _compute_autoresearch_stop_decision(selected_candidates, history, cycle_index, max_iterations, execution_mode, agent_recommendation, agent_reason):
+    previous_candidates = _flatten_history_candidates(history)
+    previous_top_score = 0.0
+    if history:
+        last_cycle_candidates = history[-1].get('selected_candidates', [])
+        if last_cycle_candidates:
+            previous_top_score = max(_to_float(candidate.get('total_score')) for candidate in last_cycle_candidates)
+
+    top_score = max((_to_float(candidate.get('total_score')) for candidate in selected_candidates), default=0.0)
+    avg_score = (
+        sum(_to_float(candidate.get('total_score')) for candidate in selected_candidates) / max(1, len(selected_candidates))
+        if selected_candidates else 0.0
+    )
+    score_gain = top_score - previous_top_score if history else top_score
+
+    overlap_scores = []
+    for candidate in selected_candidates:
+        current_signature = _candidate_signature(candidate)
+        best_overlap = 0.0
+        for previous_candidate in previous_candidates:
+            previous_signature = _candidate_signature(previous_candidate)
+            best_overlap = max(best_overlap, _jaccard_similarity(current_signature, previous_signature))
+        overlap_scores.append(best_overlap)
+    average_overlap = sum(overlap_scores) / max(1, len(overlap_scores)) if overlap_scores else 0.0
+
+    minimum_cycles_before_stop = 2 if execution_mode == 'auto' else 1
+    stop_votes = 0
+    reasons = []
+
+    normalized_agent_recommendation = str(agent_recommendation or '').strip().lower()
+    if cycle_index >= max_iterations:
+        return {
+            'should_continue': False,
+            'stop_reason': f'Max iteration {max_iterations} reached.',
+            'stop_metrics': {
+                'top_score': round(top_score, 2),
+                'avg_score': round(avg_score, 2),
+                'score_gain': round(score_gain, 2),
+                'average_overlap': round(average_overlap, 3),
+                'agent_recommendation': normalized_agent_recommendation or 'n/a',
+            }
+        }
+
+    if normalized_agent_recommendation == 'stop':
+        stop_votes += 1
+        reasons.append(agent_reason or 'Validation agent advised stopping.')
+
+    if history and average_overlap >= 0.58:
+        stop_votes += 1
+        reasons.append('New candidates overlap too much with previous cycles.')
+
+    if history and cycle_index >= minimum_cycles_before_stop and score_gain < 4.0:
+        stop_votes += 1
+        reasons.append('Top candidate quality is no longer improving enough.')
+
+    if cycle_index >= 3 and avg_score < 74.0:
+        stop_votes += 1
+        reasons.append('Average shortlisted quality dropped below the target band.')
+
+    if cycle_index < minimum_cycles_before_stop:
+        should_continue = True
+        stop_reason = f'Force at least {minimum_cycles_before_stop} cycles before stopping.'
+    elif execution_mode == 'manual':
+        should_continue = False
+        stop_reason = 'Manual mode waits for user confirmation before continuing.'
+    else:
+        should_continue = stop_votes < 2
+        if should_continue:
+            stop_reason = 'Continue: the cycle still adds enough novelty or score gain.'
+        else:
+            stop_reason = " ".join(reasons) if reasons else 'Auto stop triggered by the convergence rule.'
+
+    return {
+        'should_continue': should_continue,
+        'stop_reason': stop_reason,
+        'stop_metrics': {
+            'top_score': round(top_score, 2),
+            'avg_score': round(avg_score, 2),
+            'score_gain': round(score_gain, 2),
+            'average_overlap': round(average_overlap, 3),
+            'agent_recommendation': normalized_agent_recommendation or 'n/a',
+        }
+    }
+
 @csrf_exempt
 def get_optiresearch_state(request):
     requested_survey_id = request.GET.get('survey_id', '').strip()
@@ -1225,9 +1386,15 @@ def run_autoresearch(request):
         return JsonResponse({'error': 'Invalid JSON payload'}, status=400)
 
     survey_id = str(data.get('survey_id', '')).strip()
+    execution_mode = str(data.get('execution_mode', 'manual')).strip().lower()
+    if execution_mode not in {'manual', 'auto'}:
+        execution_mode = 'manual'
+    cycle_index = _coerce_positive_int(data.get('cycle_index', 1), default_value=1, min_value=1, max_value=20)
+    max_iterations = _coerce_positive_int(data.get('max_iterations', 5), default_value=5, min_value=2, max_value=5)
     idea_count = _coerce_positive_int(data.get('idea_count', 10), default_value=10, min_value=3, max_value=15)
     candidate_count = _coerce_positive_int(data.get('candidate_count', 3), default_value=3, min_value=1, max_value=10)
     candidate_count = min(candidate_count, idea_count)
+    history = _coerce_autoresearch_history(data.get('history', []))
 
     if not survey_id:
         return JsonResponse({'error': 'survey_id is required'}, status=400)
@@ -1239,15 +1406,17 @@ def run_autoresearch(request):
     survey_title = _load_autoresearch_survey_title(survey_id, context)
     citation_data_list = _load_autoresearch_citation_data(survey_id)
     autoresearch_context = _build_autoresearch_context(context)
+    prior_cycle_digest = _build_prior_cycle_digest(history)
 
     brainstorming_prompt = f"""
 You are the Brainstorming Agent in AutoResearch.
-Your job is to propose exactly {idea_count} research ideas based only on the survey review below.
+Your job is to propose exactly {idea_count} research ideas for cycle {cycle_index} based only on the survey review below.
 
 Rules:
 - Focus on novel or high-value directions implied by the survey.
 - Do not perform feasibility filtering yet.
 - Keep each idea concrete and distinct.
+- Avoid repeating or lightly rephrasing ideas that already appeared in earlier shortlisted candidates.
 - Return JSON only in this exact shape:
 {{
   "ideas": [
@@ -1262,6 +1431,9 @@ Rules:
 }}
 
 Survey title: {survey_title}
+
+Prior shortlisted candidates from earlier cycles:
+{json.dumps(prior_cycle_digest, ensure_ascii=False, indent=2)}
 
 Survey review context:
 {autoresearch_context}
@@ -1295,6 +1467,7 @@ Rules:
 - Produce exactly one hypothesis per idea.
 - Use only citation source names that appear inside each idea's evidence pack.
 - Keep the fields concise and specific.
+- Avoid semantic duplication with prior shortlisted candidates.
 - Return JSON only in this exact shape:
 {{
   "hypotheses": [
@@ -1314,6 +1487,9 @@ Rules:
 }}
 
 Survey title: {survey_title}
+
+Prior shortlisted candidates from earlier cycles:
+{json.dumps(prior_cycle_digest, ensure_ascii=False, indent=2)}
 
 Idea and evidence packs:
 {json.dumps(evidence_packs, ensure_ascii=False, indent=2)}
@@ -1344,9 +1520,12 @@ Rules:
 - Rank all hypotheses from strongest to weakest.
 - Select the best {candidate_count} candidates.
 - Keep reviewer summaries short and specific.
+- If this is auto mode, recommend `continue` only when the new shortlist is still materially novel and meaningfully stronger or different from earlier cycles.
 - Return JSON only in this exact shape:
 {{
   "review_summary": "Overall summary",
+  "continue_recommendation": "continue",
+  "continue_reason": "Why continue or stop",
   "ranked_hypotheses": [
     {{
       "hypothesis_id": "H1",
@@ -1364,6 +1543,13 @@ Rules:
 
 Structured hypotheses:
 {json.dumps(hypotheses, ensure_ascii=False, indent=2)}
+
+Prior shortlisted candidates from earlier cycles:
+{json.dumps(prior_cycle_digest, ensure_ascii=False, indent=2)}
+
+Execution mode: {execution_mode}
+Cycle index: {cycle_index}
+Max iterations: {max_iterations}
 """
 
     try:
@@ -1372,6 +1558,8 @@ Structured hypotheses:
         ranked_hypotheses = validation_payload.get('ranked_hypotheses', [])
         selected_candidate_ids = validation_payload.get('selected_candidate_ids', [])
         review_summary = str(validation_payload.get('review_summary') or '').strip()
+        continue_recommendation = str(validation_payload.get('continue_recommendation') or '').strip().lower()
+        continue_reason = str(validation_payload.get('continue_reason') or '').strip()
 
         if not isinstance(ranked_hypotheses, list) or not ranked_hypotheses:
             raise ValueError('Validation agent returned no rankings')
@@ -1390,12 +1578,25 @@ Structured hypotheses:
     except Exception as e:
         return JsonResponse({'error': f'Validation agent failed: {str(e)}'}, status=500)
 
+    stop_decision = _compute_autoresearch_stop_decision(
+        selected_candidates,
+        history,
+        cycle_index,
+        max_iterations,
+        execution_mode,
+        continue_recommendation,
+        continue_reason
+    )
+
     return JsonResponse({
         'success': True,
         'survey_id': survey_id,
         'survey_title': survey_title,
         'source_path': source_path,
         'cycle': {
+            'iteration': cycle_index,
+            'execution_mode': execution_mode,
+            'max_iterations': max_iterations,
             'idea_count_requested': idea_count,
             'candidate_count_requested': candidate_count,
             'ideas': ideas,
@@ -1404,6 +1605,11 @@ Structured hypotheses:
             'selected_candidates': selected_candidates,
             'review_summary': review_summary,
             'citation_pool_size': len(citation_data_list),
+            'continue_recommendation': continue_recommendation or 'continue',
+            'continue_reason': continue_reason,
+            'should_continue': stop_decision['should_continue'],
+            'stop_reason': stop_decision['stop_reason'],
+            'stop_metrics': stop_decision['stop_metrics'],
         }
     })
 
