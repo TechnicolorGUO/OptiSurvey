@@ -470,6 +470,49 @@ textarea {
     height: 100%;
   }
 
+  .optiresearch-side-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background:
+      radial-gradient(circle at top right, rgba(58, 110, 165, 0.08), transparent 34%),
+      linear-gradient(180deg, #fbfdff 0%, #f6f9fc 100%);
+  }
+
+  .optiresearch-tabs {
+    display: flex;
+    gap: 10px;
+    padding: 14px 18px 0;
+  }
+
+  .optiresearch-tab-button {
+    border: 1px solid rgba(13, 43, 69, 0.1);
+    background: rgba(255, 255, 255, 0.9);
+    color: #35556d;
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+
+  .optiresearch-tab-button.is-active {
+    background: #0d2b45;
+    color: #fff;
+    box-shadow: 0 10px 22px rgba(13, 43, 69, 0.18);
+  }
+
+  .optiresearch-tab-panel {
+    display: none;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .optiresearch-tab-panel.is-active {
+    display: flex;
+    flex-direction: column;
+  }
+
   .optiresearch-chat-log {
     flex: 1;
     overflow-y: auto;
@@ -571,6 +614,375 @@ textarea {
     background: #f7fafc;
   }
 
+  .autoresearch-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: 0;
+    padding: 18px;
+    overflow-y: auto;
+  }
+
+  .autoresearch-cycle-banner {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(220px, 0.8fr);
+    gap: 16px;
+    padding: 18px;
+    border-radius: 22px;
+    background:
+      linear-gradient(135deg, #0d2b45 0%, #153d61 55%, #285a85 100%);
+    color: #fff;
+    box-shadow: 0 20px 40px rgba(13, 43, 69, 0.2);
+  }
+
+  .autoresearch-eyebrow {
+    display: inline-block;
+    margin-bottom: 8px;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.72);
+  }
+
+  .autoresearch-cycle-banner h4 {
+    margin: 0 0 8px;
+    font-size: 28px;
+    font-weight: 700;
+  }
+
+  .autoresearch-cycle-banner p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.82);
+    line-height: 1.6;
+  }
+
+  .autoresearch-cycle-stats {
+    display: grid;
+    gap: 10px;
+    align-content: start;
+  }
+
+  .autoresearch-cycle-stat {
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(10px);
+  }
+
+  .autoresearch-cycle-stat strong {
+    display: block;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .autoresearch-cycle-stat span {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.76);
+  }
+
+  .autoresearch-workflow {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .autoresearch-step {
+    position: relative;
+    padding: 16px;
+    border-radius: 18px;
+    background: #fff;
+    border: 1px solid rgba(13, 43, 69, 0.08);
+    box-shadow: 0 10px 26px rgba(18, 44, 72, 0.08);
+  }
+
+  .autoresearch-step-index {
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #e6eef6;
+    color: #0d2b45;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .autoresearch-step h5 {
+    margin: 12px 0 6px;
+    color: #16344f;
+    font-size: 16px;
+  }
+
+  .autoresearch-step p {
+    margin: 0;
+    color: #64798a;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .autoresearch-control-card,
+  .autoresearch-section,
+  .autoresearch-empty-state,
+  .autoresearch-review-summary {
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(13, 43, 69, 0.08);
+    border-radius: 20px;
+    box-shadow: 0 14px 30px rgba(18, 44, 72, 0.06);
+  }
+
+  .autoresearch-control-card {
+    padding: 18px;
+  }
+
+  .autoresearch-control-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+    gap: 12px;
+    align-items: end;
+  }
+
+  .autoresearch-field label {
+    display: block;
+    margin-bottom: 8px;
+    color: #26465f;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .autoresearch-field input {
+    width: 100%;
+    border: 1px solid rgba(13, 43, 69, 0.14);
+    border-radius: 14px;
+    padding: 12px 14px;
+    outline: none;
+    background: #fbfdff;
+  }
+
+  .autoresearch-note {
+    margin: 12px 0 0;
+    color: #6b7e8d;
+    font-size: 12px;
+  }
+
+  .autoresearch-run {
+    min-width: 150px;
+    border: none;
+    border-radius: 14px;
+    padding: 12px 18px;
+    background: linear-gradient(135deg, #0d2b45 0%, #20537e 100%);
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 14px 24px rgba(13, 43, 69, 0.18);
+  }
+
+  .autoresearch-results {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .autoresearch-empty-state {
+    padding: 28px;
+    color: #637786;
+    text-align: center;
+    line-height: 1.7;
+  }
+
+  .autoresearch-section {
+    padding: 18px;
+  }
+
+  .autoresearch-section-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+  }
+
+  .autoresearch-section-header h4 {
+    margin: 0;
+    font-size: 18px;
+    color: #15344d;
+  }
+
+  .autoresearch-section-header p {
+    margin: 0;
+    color: #6e8190;
+    font-size: 13px;
+  }
+
+  .autoresearch-idea-list,
+  .autoresearch-candidate-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .autoresearch-idea-item,
+  .autoresearch-candidate-card {
+    padding: 16px;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
+    border: 1px solid rgba(13, 43, 69, 0.08);
+  }
+
+  .autoresearch-idea-item-header,
+  .autoresearch-candidate-header,
+  .autoresearch-hypothesis-card-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+
+  .autoresearch-chip,
+  .autoresearch-score-pill,
+  .autoresearch-rank-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .autoresearch-chip {
+    background: #eaf2f8;
+    color: #355670;
+  }
+
+  .autoresearch-score-pill {
+    background: #edf7ef;
+    color: #1f6a3c;
+  }
+
+  .autoresearch-rank-pill {
+    background: #fff3d8;
+    color: #8a6111;
+  }
+
+  .autoresearch-idea-item h5,
+  .autoresearch-candidate-card h5 {
+    margin: 0;
+    font-size: 16px;
+    color: #16344d;
+  }
+
+  .autoresearch-idea-copy,
+  .autoresearch-candidate-copy,
+  .autoresearch-hypothesis-copy {
+    color: #4e6577;
+    line-height: 1.65;
+    font-size: 13px;
+  }
+
+  .autoresearch-hypothesis-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px;
+  }
+
+  .autoresearch-hypothesis-card {
+    position: relative;
+    padding: 18px;
+    border-radius: 22px;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at top right, rgba(32, 83, 126, 0.12), transparent 30%),
+      linear-gradient(180deg, #ffffff 0%, #f9fbfd 100%);
+    border: 1px solid rgba(13, 43, 69, 0.08);
+    box-shadow: 0 18px 36px rgba(18, 44, 72, 0.08);
+  }
+
+  .autoresearch-hypothesis-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 5px;
+    background: linear-gradient(90deg, #0d2b45 0%, #285a85 100%);
+  }
+
+  .autoresearch-hypothesis-card h5 {
+    margin: 0;
+    font-size: 17px;
+    color: #143149;
+  }
+
+  .autoresearch-card-section {
+    margin-top: 12px;
+  }
+
+  .autoresearch-card-section strong {
+    display: block;
+    margin-bottom: 5px;
+    color: #264860;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .autoresearch-card-section p {
+    margin: 0;
+    color: #546b7d;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .autoresearch-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .autoresearch-card-tag {
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #eef3f8;
+    color: #31536a;
+    font-size: 12px;
+  }
+
+  .autoresearch-evidence-list {
+    display: grid;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .autoresearch-evidence-item {
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: #f5f8fb;
+    border: 1px dashed rgba(13, 43, 69, 0.12);
+  }
+
+  .autoresearch-evidence-item strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #25455d;
+    font-size: 12px;
+  }
+
+  .autoresearch-evidence-item span {
+    color: #5c7182;
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  .autoresearch-review-summary {
+    padding: 18px;
+    color: #4d6374;
+    line-height: 1.7;
+  }
+
   body.optiresearch-open {
     overflow: hidden;
   }
@@ -586,6 +998,12 @@ textarea {
     .optiresearch-empty {
       height: 48vh;
       min-height: 320px;
+    }
+
+    .autoresearch-cycle-banner,
+    .autoresearch-workflow,
+    .autoresearch-control-grid {
+      grid-template-columns: 1fr;
     }
   }
 </style>
@@ -633,23 +1051,125 @@ FONTS & ICONS
 			<iframe id="optiresearch-pdf-frame" class="optiresearch-pdf-frame" src="" style="display:none;"></iframe>
 		</div>
 		<div class="optiresearch-pane">
-			<div class="optiresearch-chat-layout">
+			<div class="optiresearch-side-layout">
 				<div class="optiresearch-header">
 					<div>
-						<h3 class="optiresearch-title">Ask the Survey</h3>
-						<p class="optiresearch-subtitle">Questions are answered from the generated survey content tied to the PDF.</p>
+						<h3 class="optiresearch-title">Research Copilot</h3>
+						<p class="optiresearch-subtitle">Read the survey, ask grounded questions, or run one AutoResearch cycle on top of the generated review.</p>
 					</div>
 				</div>
-				<div id="optiresearch-chat-log" class="optiresearch-chat-log">
-					<div class="optiresearch-message system">OptiResearch is disabled until the LaTeX PDF is generated. Once ready, the PDF will be mounted here automatically.</div>
+				<div class="optiresearch-tabs">
+					<button id="optiresearch-tab-button-chat" class="optiresearch-tab-button is-active" type="button" onclick="switchOptiResearchTab('chat')">Ask the Survey</button>
+					<button id="optiresearch-tab-button-autoresearch" class="optiresearch-tab-button" type="button" onclick="switchOptiResearchTab('autoresearch')">AutoResearch</button>
 				</div>
-				<div class="optiresearch-chat-controls">
-					<textarea id="optiresearch-question" placeholder="Ask about methods, findings, taxonomy, references, or any claim in the survey..." disabled></textarea>
-					<div class="optiresearch-chat-actions">
-						<span id="optiresearch-chat-status" class="optiresearch-status">Waiting for LaTeX PDF.</span>
-						<button id="optiresearch-send" type="button" class="btn btn-primary" onclick="submitOptiResearchQuestion()" disabled>
-							Ask AI
-						</button>
+				<div id="optiresearch-tab-chat" class="optiresearch-tab-panel is-active">
+					<div class="optiresearch-chat-layout">
+						<div id="optiresearch-chat-log" class="optiresearch-chat-log">
+							<div class="optiresearch-message system">OptiResearch is disabled until the LaTeX PDF is generated. Once ready, the PDF will be mounted here automatically.</div>
+						</div>
+						<div class="optiresearch-chat-controls">
+							<textarea id="optiresearch-question" placeholder="Ask about methods, findings, taxonomy, references, or any claim in the survey..." disabled></textarea>
+							<div class="optiresearch-chat-actions">
+								<span id="optiresearch-chat-status" class="optiresearch-status">Waiting for LaTeX PDF.</span>
+								<button id="optiresearch-send" type="button" class="btn btn-primary" onclick="submitOptiResearchQuestion()" disabled>
+									Ask AI
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div id="optiresearch-tab-autoresearch" class="optiresearch-tab-panel">
+					<div class="autoresearch-panel">
+						<div class="autoresearch-cycle-banner">
+							<div>
+								<span class="autoresearch-eyebrow">Single Cycle Prototype</span>
+								<h4>Cycle 01</h4>
+								<p>Start from the generated survey review, let the brainstorming agent expand it into ideas, turn them into fixed-format hypothesis cards with literature grounding, and let a validation agent rank the strongest candidates.</p>
+							</div>
+							<div class="autoresearch-cycle-stats">
+								<div class="autoresearch-cycle-stat">
+									<strong id="autoresearch-cycle-survey">No survey loaded</strong>
+									<span>Current context</span>
+								</div>
+								<div class="autoresearch-cycle-stat">
+									<strong id="autoresearch-cycle-idea-stat">n=10 ideas</strong>
+									<span>Brainstorming pool</span>
+								</div>
+								<div class="autoresearch-cycle-stat">
+									<strong id="autoresearch-cycle-candidate-stat">top 3 candidates</strong>
+									<span>Validation output</span>
+								</div>
+							</div>
+						</div>
+
+						<div class="autoresearch-workflow">
+							<div class="autoresearch-step">
+								<span class="autoresearch-step-index">1</span>
+								<h5>Brainstorming Agent</h5>
+								<p>Expands the generated review into a first-pass idea pool without feasibility filtering.</p>
+							</div>
+							<div class="autoresearch-step">
+								<span class="autoresearch-step-index">2</span>
+								<h5>Hypothesis Agent</h5>
+								<p>Writes each idea into a fixed card schema and anchors it to uploaded-paper evidence when available.</p>
+							</div>
+							<div class="autoresearch-step">
+								<span class="autoresearch-step-index">3</span>
+								<h5>Validation Agent</h5>
+								<p>Acts like a reviewer, scores the hypotheses, and keeps the top candidates for the cycle.</p>
+							</div>
+						</div>
+
+						<div class="autoresearch-control-card">
+							<div class="autoresearch-control-grid">
+								<div class="autoresearch-field">
+									<label for="autoresearch-idea-count">Brainstorming ideas</label>
+									<input id="autoresearch-idea-count" type="number" min="3" max="15" value="10" />
+								</div>
+								<div class="autoresearch-field">
+									<label for="autoresearch-candidate-count">Final candidates</label>
+									<input id="autoresearch-candidate-count" type="number" min="1" max="10" value="3" />
+								</div>
+								<button id="autoresearch-run" class="autoresearch-run" type="button" onclick="submitAutoResearchCycle()" disabled>Run Cycle</button>
+							</div>
+							<p class="autoresearch-note">Minimal mode: brainstorming only expands the survey into ideas. Feasibility checking can be layered in later cycles.</p>
+						</div>
+
+						<div id="autoresearch-status" class="optiresearch-status">AutoResearch will unlock when survey text is available.</div>
+
+						<div class="autoresearch-results">
+							<div id="autoresearch-empty" class="autoresearch-empty-state">
+								Run one cycle to generate an idea pool, structured hypothesis cards, and reviewer-ranked candidates.
+							</div>
+
+							<div id="autoresearch-content" style="display:none;">
+								<div class="autoresearch-section">
+									<div class="autoresearch-section-header">
+										<h4>1. Brainstorming Pool</h4>
+										<p id="autoresearch-ideas-meta">Ideas derived from the generated review.</p>
+									</div>
+									<div id="autoresearch-ideas" class="autoresearch-idea-list"></div>
+								</div>
+
+								<div class="autoresearch-section">
+									<div class="autoresearch-section-header">
+										<h4>2. Hypothesis Cards</h4>
+										<p id="autoresearch-hypotheses-meta">Template-locked cards generated by the hypothesis agent.</p>
+									</div>
+									<div id="autoresearch-hypotheses" class="autoresearch-hypothesis-grid"></div>
+								</div>
+
+								<div class="autoresearch-section">
+									<div class="autoresearch-section-header">
+										<h4>3. Validated Candidates</h4>
+										<p id="autoresearch-candidates-meta">Reviewer-ranked shortlist for this cycle.</p>
+									</div>
+									<div id="autoresearch-candidates" class="autoresearch-candidate-list"></div>
+								</div>
+
+								<div id="autoresearch-review-summary" class="autoresearch-review-summary"></div>
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -1385,6 +1905,12 @@ FONTS & ICONS
 		pdfUrl: ''
 	};
 
+	const autoResearchState = {
+		activeTab: 'chat',
+		running: false,
+		lastResult: null
+	};
+
 	function escapeHtml(value) {
 		return String(value || '')
 			.replace(/&/g, '&amp;')
@@ -1394,7 +1920,202 @@ FONTS & ICONS
 			.replace(/'/g, '&#39;');
 	}
 
+	function switchOptiResearchTab(tabName) {
+		autoResearchState.activeTab = tabName === 'autoresearch' ? 'autoresearch' : 'chat';
+		const tabs = ['chat', 'autoresearch'];
+		tabs.forEach(tab => {
+			const button = document.getElementById(`optiresearch-tab-button-${tab}`);
+			const panel = document.getElementById(`optiresearch-tab-${tab}`);
+			if (button) {
+				button.classList.toggle('is-active', tab === autoResearchState.activeTab);
+			}
+			if (panel) {
+				panel.classList.toggle('is-active', tab === autoResearchState.activeTab);
+			}
+		});
+	}
+
+	function syncAutoResearchControls() {
+		const ideaInput = document.getElementById('autoresearch-idea-count');
+		const candidateInput = document.getElementById('autoresearch-candidate-count');
+		let ideaCount = Math.max(3, Math.min(15, parseInt(ideaInput.value, 10) || 10));
+		let candidateCount = Math.max(1, Math.min(10, parseInt(candidateInput.value, 10) || 3));
+		candidateCount = Math.min(candidateCount, ideaCount);
+
+		ideaInput.value = ideaCount;
+		candidateInput.value = candidateCount;
+		document.getElementById('autoresearch-cycle-idea-stat').textContent = `n=${ideaCount} ideas`;
+		document.getElementById('autoresearch-cycle-candidate-stat').textContent = `top ${candidateCount} candidates`;
+	}
+
+	function setAutoResearchStatus(message) {
+		document.getElementById('autoresearch-status').textContent = message;
+	}
+
+	function clearAutoResearchResults() {
+		autoResearchState.lastResult = null;
+		document.getElementById('autoresearch-empty').style.display = 'block';
+		document.getElementById('autoresearch-content').style.display = 'none';
+		document.getElementById('autoresearch-ideas').innerHTML = '';
+		document.getElementById('autoresearch-hypotheses').innerHTML = '';
+		document.getElementById('autoresearch-candidates').innerHTML = '';
+		document.getElementById('autoresearch-review-summary').innerHTML = '';
+		document.getElementById('autoresearch-ideas-meta').textContent = 'Ideas derived from the generated review.';
+		document.getElementById('autoresearch-hypotheses-meta').textContent = 'Template-locked cards generated by the hypothesis agent.';
+		document.getElementById('autoresearch-candidates-meta').textContent = 'Reviewer-ranked shortlist for this cycle.';
+		document.getElementById('autoresearch-cycle-survey').textContent = optiResearchState.surveyId
+			? `Survey ${optiResearchState.surveyId}`
+			: 'No survey loaded';
+	}
+
+	function renderAutoResearchIdeas(ideas) {
+		const container = document.getElementById('autoresearch-ideas');
+		container.innerHTML = ideas.map(idea => `
+			<div class="autoresearch-idea-item">
+				<div class="autoresearch-idea-item-header">
+					<div>
+						<span class="autoresearch-chip">${escapeHtml(idea.id || 'Idea')}</span>
+						<h5>${escapeHtml(idea.title || 'Untitled idea')}</h5>
+					</div>
+				</div>
+				<div class="autoresearch-idea-copy">${escapeHtml(idea.core_insight || 'No summary returned.')}</div>
+				<div class="autoresearch-card-section">
+					<strong>Novelty Basis</strong>
+					<p>${escapeHtml(idea.novelty_basis || 'Not specified.')}</p>
+				</div>
+				<div class="autoresearch-card-section">
+					<strong>Why Now</strong>
+					<p>${escapeHtml(idea.why_now || 'Not specified.')}</p>
+				</div>
+			</div>
+		`).join('');
+	}
+
+	function renderAutoResearchHypotheses(hypotheses, rankings) {
+		const rankingMap = {};
+		(rankings || []).forEach(item => {
+			rankingMap[item.hypothesis_id] = item;
+		});
+
+		const container = document.getElementById('autoresearch-hypotheses');
+		container.innerHTML = hypotheses.map(hypothesis => {
+			const ranking = rankingMap[hypothesis.hypothesis_id] || {};
+			const citedPapers = Array.isArray(hypothesis.cited_papers) ? hypothesis.cited_papers : [];
+			const evidenceSnippets = Array.isArray(hypothesis.evidence_snippets) ? hypothesis.evidence_snippets : [];
+			const tagsHtml = citedPapers.length
+				? `<div class="autoresearch-card-tags">${citedPapers.map(paper => `<span class="autoresearch-card-tag">${escapeHtml(paper)}</span>`).join('')}</div>`
+				: '';
+			const evidenceHtml = evidenceSnippets.length
+				? `<div class="autoresearch-evidence-list">${evidenceSnippets.map(item => `
+					<div class="autoresearch-evidence-item">
+						<strong>${escapeHtml(item.source || 'Uploaded paper')}</strong>
+						<span>${escapeHtml(item.content || '')}</span>
+					</div>
+				`).join('')}</div>`
+				: '';
+
+			return `
+				<div class="autoresearch-hypothesis-card">
+					<div class="autoresearch-hypothesis-card-header">
+						<div>
+							<span class="autoresearch-chip">${escapeHtml(hypothesis.hypothesis_id || 'Hypothesis')}</span>
+							<h5>${escapeHtml(hypothesis.title || 'Untitled hypothesis')}</h5>
+						</div>
+						<div>
+							${ranking.rank ? `<span class="autoresearch-rank-pill">#${escapeHtml(ranking.rank)}</span>` : ''}
+							${ranking.total_score !== undefined ? `<span class="autoresearch-score-pill">${escapeHtml(ranking.total_score)}/100</span>` : ''}
+						</div>
+					</div>
+					<div class="autoresearch-card-section">
+						<strong>Research Gap</strong>
+						<p>${escapeHtml(hypothesis.research_gap || 'Not specified.')}</p>
+					</div>
+					<div class="autoresearch-card-section">
+						<strong>Hypothesis</strong>
+						<p>${escapeHtml(hypothesis.hypothesis_statement || 'Not specified.')}</p>
+					</div>
+					<div class="autoresearch-card-section">
+						<strong>Mechanism</strong>
+						<p>${escapeHtml(hypothesis.mechanism || 'Not specified.')}</p>
+					</div>
+					<div class="autoresearch-card-section">
+						<strong>Test Plan</strong>
+						<p>${escapeHtml(hypothesis.test_plan || 'Not specified.')}</p>
+					</div>
+					<div class="autoresearch-card-section">
+						<strong>Expected Signal</strong>
+						<p>${escapeHtml(hypothesis.expected_signal || 'Not specified.')}</p>
+					</div>
+					<div class="autoresearch-card-section">
+						<strong>Evidence Reasoning</strong>
+						<p>${escapeHtml(hypothesis.evidence_reasoning || 'No evidence reasoning returned.')}</p>
+					</div>
+					${tagsHtml}
+					${evidenceHtml}
+				</div>
+			`;
+		}).join('');
+	}
+
+	function renderAutoResearchCandidates(candidates) {
+		const container = document.getElementById('autoresearch-candidates');
+		container.innerHTML = candidates.map(candidate => {
+			const metrics = [
+				['Novelty', candidate.novelty],
+				['Grounding', candidate.literature_grounding],
+				['Clarity', candidate.clarity],
+				['Impact', candidate.potential_impact]
+			].filter(([, value]) => value !== undefined && value !== null)
+				.map(([label, value]) => `<span class="autoresearch-card-tag">${escapeHtml(label)} ${escapeHtml(value)}</span>`)
+				.join('');
+
+			return `
+				<div class="autoresearch-candidate-card">
+					<div class="autoresearch-candidate-header">
+						<div>
+							<span class="autoresearch-rank-pill">#${escapeHtml(candidate.rank || '')} Candidate</span>
+							<h5>${escapeHtml(candidate.title || 'Untitled candidate')}</h5>
+						</div>
+						<span class="autoresearch-score-pill">${escapeHtml(candidate.total_score || 0)}/100</span>
+					</div>
+					<div class="autoresearch-candidate-copy">${escapeHtml(candidate.hypothesis_statement || 'No candidate statement returned.')}</div>
+					<div class="autoresearch-card-section">
+						<strong>Reviewer Summary</strong>
+						<p>${escapeHtml(candidate.reviewer_summary || 'No reviewer summary returned.')}</p>
+					</div>
+					<div class="autoresearch-card-tags">${metrics}</div>
+				</div>
+			`;
+		}).join('');
+	}
+
+	function renderAutoResearchCycle(data) {
+		const cycle = data.cycle || {};
+		const ideas = Array.isArray(cycle.ideas) ? cycle.ideas : [];
+		const hypotheses = Array.isArray(cycle.hypotheses) ? cycle.hypotheses : [];
+		const rankedHypotheses = Array.isArray(cycle.ranked_hypotheses) ? cycle.ranked_hypotheses : [];
+		const selectedCandidates = Array.isArray(cycle.selected_candidates) ? cycle.selected_candidates : [];
+
+		autoResearchState.lastResult = data;
+		document.getElementById('autoresearch-empty').style.display = 'none';
+		document.getElementById('autoresearch-content').style.display = 'block';
+		document.getElementById('autoresearch-cycle-survey').textContent = data.survey_title || `Survey ${optiResearchState.surveyId || ''}`;
+		document.getElementById('autoresearch-ideas-meta').textContent = `${ideas.length} ideas generated from the survey review.`;
+		document.getElementById('autoresearch-hypotheses-meta').textContent = `${hypotheses.length} fixed-format cards generated${cycle.citation_pool_size ? ` with ${cycle.citation_pool_size} citation snippets available` : ''}.`;
+		document.getElementById('autoresearch-candidates-meta').textContent = `${selectedCandidates.length} shortlisted candidates after reviewer ranking.`;
+
+		renderAutoResearchIdeas(ideas);
+		renderAutoResearchHypotheses(hypotheses, rankedHypotheses);
+		renderAutoResearchCandidates(selectedCandidates);
+
+		document.getElementById('autoresearch-review-summary').innerHTML = `
+			<strong>Validation Summary</strong><br>
+			${escapeHtml(cycle.review_summary || 'No reviewer summary returned.')}
+		`;
+	}
+
 	function setOptiResearchState(nextState = {}) {
+		const previousSurveyId = optiResearchState.surveyId;
 		if (Object.prototype.hasOwnProperty.call(nextState, 'enabled')) {
 			optiResearchState.enabled = !!nextState.enabled;
 		}
@@ -1417,6 +2138,13 @@ FONTS & ICONS
 		const questionInput = document.getElementById('optiresearch-question');
 		const sendButton = document.getElementById('optiresearch-send');
 		const chatStatus = document.getElementById('optiresearch-chat-status');
+		const autoRunButton = document.getElementById('autoresearch-run');
+		const autoIdeaInput = document.getElementById('autoresearch-idea-count');
+		const autoCandidateInput = document.getElementById('autoresearch-candidate-count');
+
+		if (previousSurveyId && previousSurveyId !== optiResearchState.surveyId) {
+			clearAutoResearchResults();
+		}
 
 		entryButton.disabled = !optiResearchState.enabled;
 		entryStatus.textContent = optiResearchState.enabled ? 'Ready to read' : 'Waiting for LaTeX PDF';
@@ -1437,6 +2165,22 @@ FONTS & ICONS
 					: 'Reader-only mode: chat stays disabled until survey text is available.'
 			);
 
+		const autoResearchEnabled = optiResearchState.enabled && optiResearchState.chatEnabled;
+		autoRunButton.disabled = !autoResearchEnabled || autoResearchState.running;
+		autoIdeaInput.disabled = !autoResearchEnabled || autoResearchState.running;
+		autoCandidateInput.disabled = !autoResearchEnabled || autoResearchState.running;
+		if (!optiResearchState.enabled) {
+			setAutoResearchStatus('Waiting for LaTeX PDF.');
+		} else if (!optiResearchState.chatEnabled) {
+			setAutoResearchStatus('AutoResearch needs the survey text, not only the PDF preview.');
+		} else if (autoResearchState.running) {
+			setAutoResearchStatus('Running Cycle 01 across brainstorming, hypothesis writing, and validation...');
+		} else if (autoResearchState.lastResult) {
+			setAutoResearchStatus('Latest AutoResearch cycle is ready for inspection.');
+		} else {
+			setAutoResearchStatus('Ready to run one AutoResearch cycle on the current survey.');
+		}
+
 		const chatLog = document.getElementById('optiresearch-chat-log');
 		if (optiResearchState.enabled && optiResearchState.chatEnabled && !chatLog.querySelector('.optiresearch-message.user') && !chatLog.querySelector('.optiresearch-message.assistant')) {
 			chatLog.innerHTML = '';
@@ -1446,6 +2190,12 @@ FONTS & ICONS
 			renderOptiResearchMessage('system', 'Developer mode has mounted a local PDF in the reader. Chat is disabled because no matching survey text was found on disk.');
 		}
 
+		if (!autoResearchState.lastResult) {
+			document.getElementById('autoresearch-cycle-survey').textContent = optiResearchState.surveyId
+				? `Survey ${optiResearchState.surveyId}`
+				: 'No survey loaded';
+		}
+		syncAutoResearchControls();
 		updateOptiResearchPdfFrame();
 	}
 
@@ -1463,6 +2213,7 @@ FONTS & ICONS
 			pdfUrl: ''
 		});
 		clearOptiResearchChat();
+		clearAutoResearchResults();
 	}
 
 	function renderOptiResearchMessage(role, content, options = {}) {
@@ -1599,13 +2350,61 @@ FONTS & ICONS
 		}
 	}
 
+	async function submitAutoResearchCycle() {
+		if (!optiResearchState.enabled || !optiResearchState.chatEnabled || !optiResearchState.surveyId) {
+			return;
+		}
+
+		syncAutoResearchControls();
+		const ideaCount = parseInt(document.getElementById('autoresearch-idea-count').value, 10) || 10;
+		const candidateCount = parseInt(document.getElementById('autoresearch-candidate-count').value, 10) || 3;
+		autoResearchState.running = true;
+		switchOptiResearchTab('autoresearch');
+		setOptiResearchState({});
+
+		try {
+			const response = await fetch('/run_autoresearch/', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'X-CSRFToken': getCookie('csrftoken')
+				},
+				body: JSON.stringify({
+					survey_id: optiResearchState.surveyId,
+					idea_count: ideaCount,
+					candidate_count: candidateCount
+				})
+			});
+
+			const data = await response.json();
+			if (!response.ok) {
+				throw new Error(data.error || 'AutoResearch request failed.');
+			}
+
+			renderAutoResearchCycle(data);
+			setAutoResearchStatus('Cycle 01 completed. Review the ranked candidates below.');
+		} catch (error) {
+			setAutoResearchStatus(`AutoResearch failed: ${error.message}`);
+		} finally {
+			autoResearchState.running = false;
+			setOptiResearchState({});
+		}
+	}
+
 	document.addEventListener('DOMContentLoaded', function() {
+		switchOptiResearchTab('chat');
+		syncAutoResearchControls();
+		clearAutoResearchResults();
+
 		document.getElementById('optiresearch-question').addEventListener('keydown', function(event) {
 			if (event.key === 'Enter' && !event.shiftKey) {
 				event.preventDefault();
 				submitOptiResearchQuestion();
 			}
 		});
+
+		document.getElementById('autoresearch-idea-count').addEventListener('input', syncAutoResearchControls);
+		document.getElementById('autoresearch-candidate-count').addEventListener('input', syncAutoResearchControls);
 
 		document.getElementById('optiresearch-shell').addEventListener('click', function(event) {
 			if (event.target.id === 'optiresearch-shell') {

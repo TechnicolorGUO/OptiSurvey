@@ -842,6 +842,263 @@ def _parse_optiresearch_response(response_text, fallback_sources):
 
     return cleaned.strip(), fallback_sources
 
+def _load_autoresearch_survey_title(survey_id, context=""):
+    generated_result_path = os.path.join('src', 'static', 'data', 'txt', survey_id, 'generated_result.json')
+    if os.path.exists(generated_result_path):
+        try:
+            with open(generated_result_path, 'r', encoding='utf-8') as file:
+                payload = json.load(file)
+            title = str(payload.get('survey_title') or payload.get('topic') or '').strip()
+            if title:
+                return title
+        except Exception:
+            pass
+
+    if context:
+        for line in context.splitlines():
+            stripped = line.strip()
+            heading_match = re.match(r'^#\s+(.*)$', stripped)
+            if heading_match:
+                candidate = heading_match.group(1).strip()
+                candidate = re.sub(r'(?i)^a survey of\s+', '', candidate).strip()
+                if candidate:
+                    return candidate
+                break
+
+    if survey_id and survey_id == Global_survey_id and Global_survey_title:
+        return Global_survey_title
+
+    return f"Survey {survey_id}" if survey_id else "Current Survey"
+
+def _load_autoresearch_citation_data(survey_id):
+    citation_path = os.path.join('src', 'static', 'data', 'info', survey_id, 'citation_data.json')
+    if not os.path.exists(citation_path):
+        return []
+
+    try:
+        with open(citation_path, 'r', encoding='utf-8') as file:
+            payload = json.load(file)
+        if isinstance(payload, list):
+            return payload
+    except Exception:
+        pass
+    return []
+
+def _extract_json_payload(response_text, root_key=None):
+    cleaned = _strip_thinking_blocks(response_text).strip()
+    if not cleaned:
+        raise ValueError('Empty model response')
+
+    candidates = [cleaned]
+    for pattern in (r'\{[\s\S]*\}', r'\[[\s\S]*\]'):
+        match = re.search(pattern, cleaned)
+        if match:
+            candidates.append(match.group(0))
+
+    for candidate in candidates:
+        try:
+            parsed = json.loads(candidate)
+            if root_key and isinstance(parsed, list):
+                return {root_key: parsed}
+            return parsed
+        except Exception:
+            continue
+
+    raise ValueError('Unable to parse JSON response')
+
+def _normalize_autoresearch_text(value, max_length=320):
+    normalized = re.sub(r'\s+', ' ', str(value or '')).strip()
+    if len(normalized) <= max_length:
+        return normalized
+    return normalized[:max_length - 3].rstrip() + '...'
+
+def _build_autoresearch_context(context):
+    sections = _build_optiresearch_sections(context)
+    focus_query = 'research gaps limitations future work open challenges bottlenecks opportunities emerging directions'
+    selected_sections = _select_optiresearch_sections(focus_query, sections, max_sections=6)
+
+    context_blocks = []
+    overview = context.strip()[:3200]
+    if overview:
+        context_blocks.append(f"[Survey Overview]\n{overview}")
+
+    seen_paths = set()
+    for section in selected_sections:
+        section_path = section.get('section_path', '').strip() or 'Document Overview'
+        if section_path in seen_paths:
+            continue
+        seen_paths.add(section_path)
+        context_blocks.append(
+            f"[Section: {section_path}]\n{section.get('content', '')[:2200]}"
+        )
+
+    if not context_blocks and context.strip():
+        context_blocks.append(context[:12000])
+
+    return "\n\n".join(context_blocks)[:16000]
+
+def _safe_distance(value):
+    try:
+        return float(value)
+    except Exception:
+        return 9999.0
+
+def _select_citations_for_seed(seed_text, citation_data_list, max_items=3):
+    if not citation_data_list:
+        return []
+
+    keywords = _extract_optiresearch_keywords(seed_text)
+    normalized_seed = str(seed_text or '').lower()
+    scored_items = []
+
+    for index, item in enumerate(citation_data_list):
+        source = str(item.get('source', '')).strip()
+        content = str(item.get('content', '')).strip()
+        if not source and not content:
+            continue
+
+        source_lower = source.lower()
+        content_lower = content.lower()
+        score = 0
+
+        for keyword in keywords:
+            score += source_lower.count(keyword) * 7
+            score += content_lower.count(keyword) * 2
+
+        if normalized_seed and normalized_seed[:120] in content_lower:
+            score += 8
+
+        scored_items.append({
+            'source': source or 'Uploaded paper',
+            'content': _normalize_autoresearch_text(content, max_length=280),
+            'distance': _safe_distance(item.get('distance')),
+            'score': score,
+            'index': index,
+        })
+
+    if not scored_items:
+        return []
+
+    scored_items.sort(key=lambda item: (-item['score'], item['distance'], item['index']))
+
+    selected = []
+    seen_sources = set()
+    for item in scored_items:
+        source_key = item['source'].lower()
+        if source_key in seen_sources:
+            continue
+        seen_sources.add(source_key)
+        selected.append({
+            'source': item['source'],
+            'content': item['content'],
+        })
+        if len(selected) >= max_items:
+            break
+
+    return selected
+
+def _build_idea_evidence_packs(ideas, citation_data_list):
+    evidence_packs = []
+    for index, idea in enumerate(ideas, start=1):
+        idea_id = str(idea.get('id') or f'I{index}')
+        title = str(idea.get('title') or '').strip() or f'Idea {index}'
+        core_insight = str(idea.get('core_insight') or idea.get('description') or '').strip()
+        seed_text = " ".join(part for part in [title, core_insight] if part).strip()
+        citations = _select_citations_for_seed(seed_text, citation_data_list, max_items=3)
+        evidence_packs.append({
+            'idea_id': idea_id,
+            'title': title,
+            'core_insight': core_insight,
+            'citations': citations,
+        })
+    return evidence_packs
+
+def _citation_sources_from_pack(citation_pack):
+    return [item.get('source', '').strip() for item in citation_pack if item.get('source')]
+
+def _attach_hypothesis_evidence(hypotheses, evidence_packs):
+    evidence_by_idea = {pack['idea_id']: pack for pack in evidence_packs}
+    enriched = []
+
+    for index, hypothesis in enumerate(hypotheses, start=1):
+        item = dict(hypothesis)
+        item['hypothesis_id'] = str(item.get('hypothesis_id') or f'H{index}')
+        item['idea_id'] = str(item.get('idea_id') or f'I{index}')
+        cited_papers = item.get('cited_papers', [])
+        if isinstance(cited_papers, str):
+            cited_papers = [cited_papers]
+        if not isinstance(cited_papers, list):
+            cited_papers = []
+
+        evidence_pack = evidence_by_idea.get(item['idea_id'], {'citations': []})
+        pack_citations = evidence_pack.get('citations', [])
+        pack_sources = set(_citation_sources_from_pack(pack_citations))
+        normalized_sources = []
+        for source in cited_papers:
+            source_name = str(source).strip()
+            if source_name and source_name in pack_sources and source_name not in normalized_sources:
+                normalized_sources.append(source_name)
+
+        if not normalized_sources:
+            normalized_sources = _citation_sources_from_pack(pack_citations)[:2]
+
+        evidence_snippets = []
+        for citation in pack_citations:
+            if citation.get('source') in normalized_sources:
+                evidence_snippets.append(citation)
+
+        item['title'] = str(item.get('title') or f'Hypothesis {index}').strip()
+        item['research_gap'] = str(item.get('research_gap') or '').strip()
+        item['hypothesis_statement'] = str(item.get('hypothesis_statement') or '').strip()
+        item['mechanism'] = str(item.get('mechanism') or '').strip()
+        item['test_plan'] = str(item.get('test_plan') or '').strip()
+        item['expected_signal'] = str(item.get('expected_signal') or '').strip()
+        item['evidence_reasoning'] = str(item.get('evidence_reasoning') or '').strip()
+        item['cited_papers'] = normalized_sources
+        item['evidence_snippets'] = evidence_snippets[:2]
+        enriched.append(item)
+
+    return enriched
+
+def _merge_autoresearch_rankings(hypotheses, ranked_hypotheses, selected_candidate_ids):
+    hypothesis_map = {
+        str(hypothesis.get('hypothesis_id')): dict(hypothesis)
+        for hypothesis in hypotheses
+        if hypothesis.get('hypothesis_id')
+    }
+
+    merged_rankings = []
+    for index, ranking in enumerate(ranked_hypotheses, start=1):
+        hypothesis_id = str(ranking.get('hypothesis_id') or '')
+        if not hypothesis_id:
+            continue
+        hypothesis = hypothesis_map.get(hypothesis_id, {})
+        merged = dict(hypothesis)
+        merged.update(ranking)
+        merged['rank'] = int(merged.get('rank') or index)
+        merged_rankings.append(merged)
+
+    selected_candidates = []
+    seen_ids = set()
+    for hypothesis_id in selected_candidate_ids:
+        normalized_id = str(hypothesis_id).strip()
+        if not normalized_id or normalized_id in seen_ids:
+            continue
+        seen_ids.add(normalized_id)
+        for item in merged_rankings:
+            if str(item.get('hypothesis_id')) == normalized_id:
+                selected_candidates.append(item)
+                break
+
+    return merged_rankings, selected_candidates
+
+def _coerce_positive_int(value, default_value, min_value=1, max_value=20):
+    try:
+        parsed = int(value)
+    except Exception:
+        parsed = default_value
+    return max(min_value, min(parsed, max_value))
+
 @csrf_exempt
 def get_optiresearch_state(request):
     requested_survey_id = request.GET.get('survey_id', '').strip()
@@ -957,7 +1214,201 @@ User question:
     })
 
 @csrf_exempt
-@timeout_handler(1800)  # 15分钟超时
+@timeout_handler(900)
+def run_autoresearch(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        return JsonResponse({'error': 'Invalid JSON payload'}, status=400)
+
+    survey_id = str(data.get('survey_id', '')).strip()
+    idea_count = _coerce_positive_int(data.get('idea_count', 10), default_value=10, min_value=3, max_value=15)
+    candidate_count = _coerce_positive_int(data.get('candidate_count', 3), default_value=3, min_value=1, max_value=10)
+    candidate_count = min(candidate_count, idea_count)
+
+    if not survey_id:
+        return JsonResponse({'error': 'survey_id is required'}, status=400)
+
+    context, source_path = _load_optiresearch_context(survey_id)
+    if not context.strip():
+        return JsonResponse({'error': 'Survey content is not available for AutoResearch yet.'}, status=404)
+
+    survey_title = _load_autoresearch_survey_title(survey_id, context)
+    citation_data_list = _load_autoresearch_citation_data(survey_id)
+    autoresearch_context = _build_autoresearch_context(context)
+
+    brainstorming_prompt = f"""
+You are the Brainstorming Agent in AutoResearch.
+Your job is to propose exactly {idea_count} research ideas based only on the survey review below.
+
+Rules:
+- Focus on novel or high-value directions implied by the survey.
+- Do not perform feasibility filtering yet.
+- Keep each idea concrete and distinct.
+- Return JSON only in this exact shape:
+{{
+  "ideas": [
+    {{
+      "id": "I1",
+      "title": "Short title",
+      "core_insight": "One concise paragraph",
+      "novelty_basis": "Why this seems new from the review",
+      "why_now": "Why this matters now"
+    }}
+  ]
+}}
+
+Survey title: {survey_title}
+
+Survey review context:
+{autoresearch_context}
+"""
+
+    try:
+        client = getQwenClient()
+        brainstorming_raw = generateResponse(client, brainstorming_prompt)
+        brainstorming_payload = _extract_json_payload(brainstorming_raw, root_key='ideas')
+        ideas = brainstorming_payload.get('ideas', [])
+        if not isinstance(ideas, list) or not ideas:
+            raise ValueError('Brainstorming agent returned no ideas')
+        ideas = ideas[:idea_count]
+        for index, idea in enumerate(ideas, start=1):
+            idea['id'] = str(idea.get('id') or f'I{index}')
+            idea['title'] = str(idea.get('title') or f'Idea {index}').strip()
+            idea['core_insight'] = str(idea.get('core_insight') or idea.get('description') or '').strip()
+            idea['novelty_basis'] = str(idea.get('novelty_basis') or '').strip()
+            idea['why_now'] = str(idea.get('why_now') or '').strip()
+    except Exception as e:
+        return JsonResponse({'error': f'Brainstorming agent failed: {str(e)}'}, status=500)
+
+    evidence_packs = _build_idea_evidence_packs(ideas, citation_data_list)
+
+    hypothesis_prompt = f"""
+You are the Hypothesis Agent in AutoResearch.
+Transform each brainstormed idea into one structured, falsifiable hypothesis.
+You must ground each hypothesis in the provided uploaded-paper evidence pack when evidence exists.
+
+Rules:
+- Produce exactly one hypothesis per idea.
+- Use only citation source names that appear inside each idea's evidence pack.
+- Keep the fields concise and specific.
+- Return JSON only in this exact shape:
+{{
+  "hypotheses": [
+    {{
+      "idea_id": "I1",
+      "hypothesis_id": "H1",
+      "title": "Card title",
+      "research_gap": "Gap statement",
+      "hypothesis_statement": "If ..., then ... because ...",
+      "mechanism": "Underlying logic",
+      "test_plan": "How to test it",
+      "expected_signal": "What result would support it",
+      "evidence_reasoning": "How the uploaded papers motivate it",
+      "cited_papers": ["Paper A", "Paper B"]
+    }}
+  ]
+}}
+
+Survey title: {survey_title}
+
+Idea and evidence packs:
+{json.dumps(evidence_packs, ensure_ascii=False, indent=2)}
+"""
+
+    try:
+        hypothesis_raw = generateResponse(client, hypothesis_prompt)
+        hypothesis_payload = _extract_json_payload(hypothesis_raw, root_key='hypotheses')
+        hypotheses = hypothesis_payload.get('hypotheses', [])
+        if not isinstance(hypotheses, list) or not hypotheses:
+            raise ValueError('Hypothesis agent returned no hypotheses')
+        hypotheses = _attach_hypothesis_evidence(hypotheses[:len(ideas)], evidence_packs)
+    except Exception as e:
+        return JsonResponse({'error': f'Hypothesis agent failed: {str(e)}'}, status=500)
+
+    validation_prompt = f"""
+You are the Validation Agent in AutoResearch, acting as a rigorous reviewer.
+Review the hypotheses and rank them for a single research cycle.
+
+Scoring dimensions:
+- novelty: 1-10
+- literature_grounding: 1-10
+- clarity: 1-10
+- potential_impact: 1-10
+- total_score: 0-100
+
+Rules:
+- Rank all hypotheses from strongest to weakest.
+- Select the best {candidate_count} candidates.
+- Keep reviewer summaries short and specific.
+- Return JSON only in this exact shape:
+{{
+  "review_summary": "Overall summary",
+  "ranked_hypotheses": [
+    {{
+      "hypothesis_id": "H1",
+      "rank": 1,
+      "novelty": 8,
+      "literature_grounding": 7,
+      "clarity": 9,
+      "potential_impact": 8,
+      "total_score": 82,
+      "reviewer_summary": "Short reviewer comment"
+    }}
+  ],
+  "selected_candidate_ids": ["H1", "H3", "H2"]
+}}
+
+Structured hypotheses:
+{json.dumps(hypotheses, ensure_ascii=False, indent=2)}
+"""
+
+    try:
+        validation_raw = generateResponse(client, validation_prompt)
+        validation_payload = _extract_json_payload(validation_raw)
+        ranked_hypotheses = validation_payload.get('ranked_hypotheses', [])
+        selected_candidate_ids = validation_payload.get('selected_candidate_ids', [])
+        review_summary = str(validation_payload.get('review_summary') or '').strip()
+
+        if not isinstance(ranked_hypotheses, list) or not ranked_hypotheses:
+            raise ValueError('Validation agent returned no rankings')
+        if isinstance(selected_candidate_ids, str):
+            selected_candidate_ids = [selected_candidate_ids]
+        if not isinstance(selected_candidate_ids, list):
+            selected_candidate_ids = []
+
+        merged_rankings, selected_candidates = _merge_autoresearch_rankings(
+            hypotheses,
+            ranked_hypotheses,
+            selected_candidate_ids[:candidate_count]
+        )
+        if not selected_candidates:
+            selected_candidates = merged_rankings[:candidate_count]
+    except Exception as e:
+        return JsonResponse({'error': f'Validation agent failed: {str(e)}'}, status=500)
+
+    return JsonResponse({
+        'success': True,
+        'survey_id': survey_id,
+        'survey_title': survey_title,
+        'source_path': source_path,
+        'cycle': {
+            'idea_count_requested': idea_count,
+            'candidate_count_requested': candidate_count,
+            'ideas': ideas,
+            'hypotheses': hypotheses,
+            'ranked_hypotheses': merged_rankings,
+            'selected_candidates': selected_candidates,
+            'review_summary': review_summary,
+            'citation_pool_size': len(citation_data_list),
+        }
+    })
+
+@csrf_exempt
+@timeout_handler(1800)  # 15鍒嗛挓瓒呮椂
 def upload_refs_sync(request):
     """同步版本的文件上传处理函数"""
     start_time = time.time()

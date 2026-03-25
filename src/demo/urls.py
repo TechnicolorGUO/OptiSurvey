@@ -10,6 +10,7 @@ urlpatterns = [
     path('get_surveys/', views.get_surveys, name='get_surveys'),
     path('get_optiresearch_state/', views.get_optiresearch_state, name='get_optiresearch_state'),
     path('ask_optiresearch/', views.ask_optiresearch, name='ask_optiresearch'),
+    path('run_autoresearch/', views.run_autoresearch, name='run_autoresearch'),
     path('generate_pdf/', views.generate_pdf, name='generate_pdf'),
     path('generate_pdf_from_tex/', views.generate_pdf_from_tex, name='generate_pdf_from_tex'),
     path('save_outline/', views.save_outline, name='save_outline'),
