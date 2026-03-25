@@ -919,23 +919,22 @@ textarea {
     gap: 16px;
   }
 
-  .autoresearch-cycle-card {
+  .autoresearch-cycle-overview {
     border-radius: 24px;
     overflow: hidden;
     background:
       linear-gradient(135deg, rgba(13, 43, 69, 0.08) 0%, rgba(40, 90, 133, 0.12) 100%);
     border: 1px solid rgba(13, 43, 69, 0.1);
     box-shadow: 0 18px 36px rgba(18, 44, 72, 0.08);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
   }
 
-  .autoresearch-cycle-card[open] {
-    background:
-      linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
-    border-color: rgba(13, 43, 69, 0.08);
+  .autoresearch-cycle-overview:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 22px 42px rgba(18, 44, 72, 0.11);
   }
 
   .autoresearch-cycle-summary {
-    list-style: none;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -947,11 +946,16 @@ textarea {
     color: #fff;
   }
 
-  .autoresearch-cycle-card[open] .autoresearch-cycle-summary {
-    background:
-      linear-gradient(135deg, #eef4f8 0%, #e4edf5 100%);
-    color: #173650;
-    border-bottom: 1px solid rgba(13, 43, 69, 0.08);
+  .autoresearch-cycle-open {
+    border: none;
+    border-radius: 999px;
+    padding: 9px 14px;
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 
   .autoresearch-cycle-summary::-webkit-details-marker,
@@ -978,6 +982,14 @@ textarea {
     opacity: 0.82;
   }
 
+  .autoresearch-cycle-highlight {
+    margin-top: 8px;
+    font-size: 12px;
+    color: inherit;
+    opacity: 0.9;
+    line-height: 1.5;
+  }
+
   .autoresearch-cycle-badges,
   .autoresearch-summary-badges {
     display: flex;
@@ -990,6 +1002,126 @@ textarea {
     padding: 18px;
     display: grid;
     gap: 14px;
+  }
+
+  .autoresearch-canvas {
+    position: absolute;
+    inset: 24px;
+    z-index: 4;
+    display: none;
+    background: rgba(6, 19, 33, 0.42);
+    backdrop-filter: blur(7px);
+    border-radius: 24px;
+  }
+
+  .autoresearch-canvas.is-open {
+    display: block;
+  }
+
+  .autoresearch-canvas-panel {
+    position: absolute;
+    inset: 20px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-radius: 26px;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at top right, rgba(40, 90, 133, 0.12), transparent 30%),
+      linear-gradient(180deg, #fdfefe 0%, #f5f9fc 100%);
+    box-shadow: 0 28px 70px rgba(6, 19, 33, 0.26);
+  }
+
+  .autoresearch-canvas-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 22px;
+    border-bottom: 1px solid rgba(13, 43, 69, 0.08);
+    background:
+      linear-gradient(135deg, rgba(13, 43, 69, 0.92) 0%, rgba(26, 73, 111, 0.86) 100%);
+    color: #fff;
+  }
+
+  .autoresearch-canvas-header h4 {
+    margin: 0;
+    font-size: 22px;
+  }
+
+  .autoresearch-canvas-header p {
+    margin: 6px 0 0;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .autoresearch-canvas-close {
+    border: none;
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+    width: 38px;
+    height: 38px;
+    border-radius: 999px;
+    font-size: 18px;
+  }
+
+  .autoresearch-canvas-body {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 20px 22px 24px;
+  }
+
+  .autoresearch-canvas-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    align-items: start;
+  }
+
+  .autoresearch-canvas-agent {
+    border-radius: 22px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(13, 43, 69, 0.08);
+    box-shadow: 0 14px 28px rgba(18, 44, 72, 0.06);
+  }
+
+  .autoresearch-canvas-agent-summary {
+    list-style: none;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 16px 18px;
+    cursor: pointer;
+    background: linear-gradient(180deg, #f6fafc 0%, #ebf2f7 100%);
+  }
+
+  .autoresearch-canvas-agent-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .autoresearch-canvas-agent-summary h5 {
+    margin: 0;
+    font-size: 17px;
+    color: #173650;
+  }
+
+  .autoresearch-canvas-agent-summary p {
+    margin: 5px 0 0;
+    color: #667d8f;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .autoresearch-canvas-agent-body {
+    padding: 16px 18px 18px;
+    display: grid;
+    gap: 12px;
+    max-height: calc(100vh - 260px);
+    overflow: auto;
   }
 
   .autoresearch-section-accordion {
@@ -1258,6 +1390,18 @@ textarea {
     .autoresearch-control-grid {
       grid-template-columns: 1fr;
     }
+
+    .autoresearch-canvas {
+      inset: 10px;
+    }
+
+    .autoresearch-canvas-panel {
+      inset: 8px;
+    }
+
+    .autoresearch-canvas-grid {
+      grid-template-columns: 1fr;
+    }
   }
 </style>
 
@@ -1416,6 +1560,19 @@ FONTS & ICONS
 							<div id="autoresearch-content" style="display:none;">
 								<div id="autoresearch-sequence-summary" class="autoresearch-review-summary"></div>
 								<div id="autoresearch-cycle-stack" class="autoresearch-cycle-stack"></div>
+							</div>
+						</div>
+
+						<div id="autoresearch-cycle-canvas" class="autoresearch-canvas" aria-hidden="true">
+							<div class="autoresearch-canvas-panel">
+								<div class="autoresearch-canvas-header">
+									<div>
+										<h4 id="autoresearch-canvas-title">Cycle Details</h4>
+										<p id="autoresearch-canvas-subtitle">Detailed agent output will appear here.</p>
+									</div>
+									<button type="button" class="autoresearch-canvas-close" onclick="closeAutoResearchCanvas()">&times;</button>
+								</div>
+								<div id="autoresearch-canvas-body" class="autoresearch-canvas-body"></div>
 							</div>
 						</div>
 					</div>
@@ -2159,7 +2316,8 @@ FONTS & ICONS
 		lastResult: null,
 		cycleHistory: [],
 		mode: 'auto',
-		currentOperationId: null
+		currentOperationId: null,
+		selectedCycleIndex: null
 	};
 
 	function escapeHtml(value) {
@@ -2251,10 +2409,21 @@ FONTS & ICONS
 		document.getElementById('autoresearch-agent-list').innerHTML = '';
 	}
 
+	function closeAutoResearchCanvas() {
+		autoResearchState.selectedCycleIndex = null;
+		const canvas = document.getElementById('autoresearch-cycle-canvas');
+		canvas.classList.remove('is-open');
+		canvas.setAttribute('aria-hidden', 'true');
+		document.getElementById('autoresearch-canvas-title').textContent = 'Cycle Details';
+		document.getElementById('autoresearch-canvas-subtitle').textContent = 'Detailed agent output will appear here.';
+		document.getElementById('autoresearch-canvas-body').innerHTML = '';
+	}
+
 	function clearAutoResearchResults() {
 		autoResearchState.lastResult = null;
 		autoResearchState.cycleHistory = [];
 		autoResearchState.currentOperationId = null;
+		autoResearchState.selectedCycleIndex = null;
 		document.getElementById('autoresearch-empty').style.display = 'block';
 		document.getElementById('autoresearch-content').style.display = 'none';
 		document.getElementById('autoresearch-sequence-summary').innerHTML = '';
@@ -2263,6 +2432,7 @@ FONTS & ICONS
 			? `Survey ${optiResearchState.surveyId}`
 			: 'No survey loaded';
 		hideAutoResearchRuntime();
+		closeAutoResearchCanvas();
 		updateAutoResearchActionButtons();
 	}
 
@@ -2467,6 +2637,65 @@ FONTS & ICONS
 		`;
 	}
 
+  function renderCanvasAgent(title, subtitle, countLabel, bodyHtml, options = {}) {
+    const openAttr = options.defaultOpen ? ' open' : '';
+		return `
+			<details class="autoresearch-canvas-agent"${openAttr}>
+				<summary class="autoresearch-canvas-agent-summary">
+					<div>
+						<h5>${escapeHtml(title)}</h5>
+						<p>${escapeHtml(subtitle)}</p>
+					</div>
+					<div class="autoresearch-summary-badges">
+						${buildBadge(countLabel, 'autoresearch-chip')}
+					</div>
+				</summary>
+				<div class="autoresearch-canvas-agent-body">
+					${bodyHtml}
+				</div>
+			</details>
+		`;
+	}
+
+	function openAutoResearchCanvas(cycleIndex) {
+		autoResearchState.selectedCycleIndex = cycleIndex;
+		const entry = autoResearchState.cycleHistory[cycleIndex];
+		if (!entry) {
+			return;
+		}
+
+		const cycle = entry.cycle || {};
+		const ideas = Array.isArray(cycle.ideas) ? cycle.ideas : [];
+		const hypotheses = Array.isArray(cycle.hypotheses) ? cycle.hypotheses : [];
+		const rankedHypotheses = Array.isArray(cycle.ranked_hypotheses) ? cycle.ranked_hypotheses : [];
+		const selectedCandidates = Array.isArray(cycle.selected_candidates) ? cycle.selected_candidates : [];
+
+		document.getElementById('autoresearch-canvas-title').textContent = `Cycle ${String(cycle.iteration || (cycleIndex + 1)).padStart(2, '0')}`;
+		document.getElementById('autoresearch-canvas-subtitle').textContent = cycle.stop_reason || cycle.review_summary || 'Detailed agent output.';
+
+		const brainstormingHtml = ideas.map(renderIdeaAccordion).join('');
+		const hypothesisHtml = hypotheses.map(hypothesis => renderHypothesisAccordion(hypothesis, rankedHypotheses)).join('');
+		const validationHtml = `
+			<div class="autoresearch-review-summary">
+				<strong>Reviewer Summary</strong><br>
+				${escapeHtml(cycle.review_summary || 'No review summary returned.')}
+			</div>
+			${selectedCandidates.map(renderCandidateAccordion).join('')}
+		`;
+
+		document.getElementById('autoresearch-canvas-body').innerHTML = `
+			<div class="autoresearch-canvas-grid">
+				${renderCanvasAgent('Brainstorming Agent', 'Cycle idea pool. Click to expand the generated ideas.', `${ideas.length} ideas`, brainstormingHtml)}
+				${renderCanvasAgent('Hypothesis Agent', 'Structured hypothesis cards. This panel opens by default.', `${hypotheses.length} cards`, hypothesisHtml, { defaultOpen: true })}
+				${renderCanvasAgent('Validation Agent', 'Ranked shortlist and reviewer judgement.', `${selectedCandidates.length} results`, validationHtml)}
+			</div>
+		`;
+
+		const canvas = document.getElementById('autoresearch-cycle-canvas');
+		canvas.classList.add('is-open');
+		canvas.setAttribute('aria-hidden', 'false');
+	}
+
 	function renderAutoResearchSequence() {
 		const sequenceSummary = document.getElementById('autoresearch-sequence-summary');
 		const stack = document.getElementById('autoresearch-cycle-stack');
@@ -2500,43 +2729,41 @@ FONTS & ICONS
 			const topScore = selectedCandidates.length
 				? Math.max(...selectedCandidates.map(candidate => parseFloat(candidate.total_score || 0)))
 				: 0;
+			const topCandidateTitle = selectedCandidates.length
+				? (selectedCandidates[0].title || selectedCandidates[0].hypothesis_statement || 'No top candidate title')
+				: 'No shortlisted candidate';
 			const isLatest = index === history.length - 1;
 			const stopMetrics = cycle.stop_metrics || {};
 			const cycleDecisionLabel = cycle.should_continue ? 'Continue' : 'Stop';
 			const cycleDecisionClass = cycle.should_continue ? 'autoresearch-chip' : 'autoresearch-rank-pill';
 
-			const ideasHtml = ideas.map(renderIdeaAccordion).join('');
-			const hypothesesHtml = hypotheses.map(hypothesis => renderHypothesisAccordion(hypothesis, rankedHypotheses)).join('');
-			const candidatesHtml = selectedCandidates.map(renderCandidateAccordion).join('');
-
 			return `
-				<details class="autoresearch-cycle-card"${isLatest ? ' open' : ''}>
-					<summary class="autoresearch-cycle-summary">
+				<article class="autoresearch-cycle-overview" role="button" tabindex="0" onclick="openAutoResearchCanvas(${index})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openAutoResearchCanvas(${index});}">
+					<div class="autoresearch-cycle-summary">
 						<div class="autoresearch-cycle-title">
 							<h4>Cycle ${escapeHtml(String(cycle.iteration || (index + 1)).padStart(2, '0'))}</h4>
 							<p>${escapeHtml(cycle.review_summary || 'No review summary returned.')}</p>
+							<div class="autoresearch-cycle-highlight">Top candidate: ${escapeHtml(topCandidateTitle)}</div>
 						</div>
 						<div class="autoresearch-cycle-badges">
 							${buildBadge('AUTO', 'autoresearch-chip')}
 							${buildBadge(`Top ${selectedCandidates.length}`, 'autoresearch-chip')}
 							${buildBadge(`Score ${topScore}/100`, 'autoresearch-score-pill')}
 							${buildBadge(cycleDecisionLabel, cycleDecisionClass)}
+							<span class="autoresearch-cycle-open">Open</span>
 						</div>
-					</summary>
+					</div>
 					<div class="autoresearch-cycle-body">
 						<div class="autoresearch-review-summary">
-							<strong>Cycle Decision</strong><br>
+							<strong>Cycle Overview</strong><br>
 							${escapeHtml(cycle.stop_reason || 'No stop reason returned.')}
 							<br><br>
 							${buildBadge(`Gain ${stopMetrics.score_gain !== undefined ? stopMetrics.score_gain : 'n/a'}`)}
 							${buildBadge(`Overlap ${stopMetrics.average_overlap !== undefined ? stopMetrics.average_overlap : 'n/a'}`)}
 							${buildBadge(`Avg ${stopMetrics.avg_score !== undefined ? stopMetrics.avg_score : 'n/a'}`)}
 						</div>
-						${renderCycleSection('1. Brainstorming Pool', 'Ideas derived from the generated review.', `${ideas.length} ideas`, ideasHtml)}
-						${renderCycleSection('2. Hypothesis Cards', 'Template-locked cards generated by the hypothesis agent.', `${hypotheses.length} cards`, hypothesesHtml)}
-						${renderCycleSection('3. Review Results', 'Reviewer-ranked shortlist for this cycle.', `${selectedCandidates.length} shortlisted`, candidatesHtml)}
 					</div>
-				</details>
+				</article>
 			`;
 		}).join('');
 	}
@@ -2721,6 +2948,7 @@ FONTS & ICONS
 	}
 
 	function closeOptiResearchWorkspace() {
+		closeAutoResearchCanvas();
 		document.getElementById('optiresearch-shell').classList.remove('is-open');
 		document.getElementById('optiresearch-shell').setAttribute('aria-hidden', 'true');
 		document.body.classList.remove('optiresearch-open');
@@ -2868,6 +3096,12 @@ FONTS & ICONS
 		document.getElementById('optiresearch-shell').addEventListener('click', function(event) {
 			if (event.target.id === 'optiresearch-shell') {
 				closeOptiResearchWorkspace();
+			}
+		});
+
+		document.getElementById('autoresearch-cycle-canvas').addEventListener('click', function(event) {
+			if (event.target.id === 'autoresearch-cycle-canvas') {
+				closeAutoResearchCanvas();
 			}
 		});
 
