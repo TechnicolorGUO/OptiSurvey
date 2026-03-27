@@ -181,7 +181,16 @@ def parse_json_response(response: Any) -> Dict[str, Any]:
 def copy_to_static_info(survey_id: str, citation_source: Path) -> Path:
     target_dir = ensure_dir(REPO_ROOT / "src" / "static" / "data" / "info" / survey_id)
     target_path = target_dir / "citation_data.json"
-    shutil.copy2(citation_source, target_path)
+    if citation_source.resolve() != target_path.resolve():
+        shutil.copy2(citation_source, target_path)
+    return target_path
+
+
+def copy_to_static_txt(survey_id: str, survey_source: Path) -> Path:
+    target_dir = ensure_dir(REPO_ROOT / "src" / "static" / "data" / "txt" / survey_id)
+    target_path = target_dir / "generated_result.json"
+    if survey_source.resolve() != target_path.resolve():
+        shutil.copy2(survey_source, target_path)
     return target_path
 
 
@@ -215,9 +224,9 @@ def sanitize_filename_for_preprocessed_md(filename: str) -> str:
     return sanitize_part(name) + "." + sanitize_part(extension)
 
 
-def hydrate_preprocessed_markdown_for_survey(survey_id: str, pdf_paths: List[str]) -> List[str]:
+def hydrate_preprocessed_markdown_for_survey(survey_md_root: Path, pdf_paths: List[str]) -> List[str]:
     recommend_md_root = REPO_ROOT / "src" / "static" / "data" / "pdf" / "recommend_pdfs_md"
-    survey_md_root = ensure_dir(REPO_ROOT / "md" / survey_id)
+    survey_md_root = ensure_dir(survey_md_root)
     copied_dirs: List[str] = []
 
     for pdf_path in pdf_paths:
@@ -350,7 +359,7 @@ def generate_survey(
     ASGSystem, RetrieverCls, _ = get_pipeline_imports()
     pdf_root = Path(pdf_dir).resolve() if pdf_dir else ensure_dir(topic_dir / "pdfs")
     ensure_dir(REPO_ROOT / "src" / "static" / "data" / "txt" / survey_id)
-    ensure_dir(REPO_ROOT / "info" / survey_id)
+    ensure_dir(REPO_ROOT / "src" / "static" / "data" / "info" / survey_id)
 
     runtime: Dict[str, Any] = {}
     retriever = RetrieverCls()
@@ -371,7 +380,7 @@ def generate_survey(
         runtime["downloaded_pdf_count"] = len(reference_download_result["downloaded_files"])
         runtime["failed_download_count"] = len(reference_download_result.get("failed_downloads", []))
         preprocessed_md_dirs = hydrate_preprocessed_markdown_for_survey(
-            survey_id=survey_id,
+            survey_md_root=Path(asg_system.md_path) / survey_id,
             pdf_paths=reference_download_result["downloaded_files"],
         )
         runtime["reused_preprocessed_markdown_count"] = len(preprocessed_md_dirs)
@@ -397,13 +406,14 @@ def generate_survey(
     asg_system.section_generation()
     runtime["section_generation_seconds"] = round(time.time() - start, 2)
 
-    survey_json_source = REPO_ROOT / "src" / "static" / "data" / "txt" / survey_id / "generated_result.json"
-    citation_json_source = REPO_ROOT / "info" / survey_id / "citation_data.json"
+    survey_json_source = Path(asg_system.txt_path) / survey_id / "generated_result.json"
+    citation_json_source = Path(asg_system.info_path) / survey_id / "citation_data.json"
     if not survey_json_source.exists():
         raise FileNotFoundError(f"Survey output not found: {survey_json_source}")
     if not citation_json_source.exists():
         raise FileNotFoundError(f"Citation data not found: {citation_json_source}")
 
+    static_survey_path = copy_to_static_txt(survey_id, survey_json_source)
     static_citation_path = copy_to_static_info(survey_id, citation_json_source)
     survey_dir = ensure_dir(topic_dir / "survey")
     survey_json_target = survey_dir / "generated_result.json"
@@ -411,13 +421,13 @@ def generate_survey(
     survey_md_target = survey_dir / "survey.md"
     runtime_target = survey_dir / "runtime.json"
 
-    shutil.copy2(survey_json_source, survey_json_target)
+    shutil.copy2(static_survey_path, survey_json_target)
     shutil.copy2(static_citation_path, citation_json_target)
     survey_payload = read_json(survey_json_target)
     survey_md_target.write_text(render_survey_markdown(survey_payload), encoding="utf-8")
     write_json(runtime_target, runtime)
-    copy_if_exists(REPO_ROOT / "info" / survey_id / "outline.json", survey_dir / "outline.json")
-    copy_if_exists(REPO_ROOT / "info" / survey_id / "cluster_info.json", survey_dir / "cluster_info.json")
+    copy_if_exists(Path(asg_system.info_path) / survey_id / "outline.json", survey_dir / "outline.json")
+    copy_if_exists(Path(asg_system.info_path) / survey_id / "cluster_info.json", survey_dir / "cluster_info.json")
 
     return {
         "survey_json_path": str(survey_json_target),

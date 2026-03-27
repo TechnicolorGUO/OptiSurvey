@@ -21,3 +21,10 @@ src/demo/survey_generation_pipeline/result
 src/demo/survey_generation_pipeline/tsv
 src/demo/survey_generation_pipeline/txt
 InteractiveSurvey-default-report.pdf
+txt/
+tsv/
+md/
+info/
+result/
+result_3_25/
+retrieval_info.json

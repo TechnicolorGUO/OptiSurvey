@@ -27,6 +27,9 @@ import os
 from markdown_pdf import MarkdownPdf, Section  # Assuming you are using markdown_pdf
 from typing import Any
 import xml.etree.ElementTree as ET
+from pathlib import Path
+
+DATA_ROOT = Path(__file__).resolve().parents[2] / "static" / "data"
 
 def get_embedding_device() -> str:
     return "cuda" if torch.cuda.is_available() else "cpu"
@@ -267,12 +270,12 @@ class ASG_system:
     def __init__(self, root_path: str, survey_id:str, pdf_path: str, survey_title: str, cluster_standard: str) -> None:
         load_dotenv()
         self.pdf_path = pdf_path
-        self.base_path = ""
-        self.txt_path = os.path.join(root_path, "txt")
-        self.tsv_path = os.path.join(root_path, "tsv")
-        self.md_path = os.path.join(root_path, "md")
-        self.info_path = os.path.join(root_path, "info")
-        self.result_path = os.path.join(root_path, "result_3_25")
+        self.base_path = str(DATA_ROOT)
+        self.txt_path = str(DATA_ROOT / "txt")
+        self.tsv_path = str(DATA_ROOT / "tsv")
+        self.md_path = str(DATA_ROOT / "md")
+        self.info_path = str(DATA_ROOT / "info")
+        self.result_path = str(DATA_ROOT / "results")
 
         self.survey_id = survey_id
         self.survey_title = survey_title
@@ -571,8 +574,7 @@ class ASG_system:
                 "retrieved_chunks": context,
                 "description": description
             })
-        # retrieval_json_path = os.path.join(self.info_path, self.survey_id, "retrieval_info.json")
-        retrieval_json_path = os.path.join(".", "retrieval_info.json")
+        retrieval_json_path = os.path.join(self.info_path, self.survey_id, "retrieval_info.json")
         with open(retrieval_json_path, 'w', encoding="utf-8") as f:
             json.dump(retrieval_info, f, indent=4, ensure_ascii=False)
           
