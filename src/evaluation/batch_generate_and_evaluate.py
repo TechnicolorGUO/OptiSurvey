@@ -7,6 +7,7 @@ import re
 import shutil
 import sys
 import time
+import traceback
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -41,7 +42,18 @@ def get_pipeline_imports() -> Tuple[Any, Any, Any]:
     global _PIPELINE_IMPORTS
     if _PIPELINE_IMPORTS is None:
         import importlib
+        import sys
 
+        # The survey_generation_pipeline package still uses a few legacy absolute
+        # imports that actually point at modules under the demo package.
+        sys.modules.setdefault(
+            "survey_generator_api",
+            importlib.import_module("demo.survey_generator_api"),
+        )
+        sys.modules.setdefault(
+            "references",
+            importlib.import_module("demo.references"),
+        )
         pipeline_main = importlib.import_module("survey_generation_pipeline.main")
         pipeline_retriever = importlib.import_module("survey_generation_pipeline.asg_retriever")
         pipeline_generator = importlib.import_module("survey_generation_pipeline.asg_generator")
@@ -671,6 +683,7 @@ def main() -> None:
         except Exception as exc:
             failures.append({"topic": topic, "error": str(exc)})
             print(f"  Failed | {exc}")
+            traceback.print_exc()
 
         if args.sleep_between_topics > 0 and index < len(manifest):
             time.sleep(args.sleep_between_topics)
