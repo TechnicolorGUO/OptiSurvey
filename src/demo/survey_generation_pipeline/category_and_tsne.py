@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 from sklearn.cluster import AgglomerativeClustering
 import json
+import torch
 
 IMG_PATH = './src/static/img/'
 
@@ -29,6 +30,9 @@ import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 import seaborn as sns
 
+def get_embedding_device() -> str:
+    return "cuda" if torch.cuda.is_available() else "cpu"
+
 class DimensionalityReduction:
     def fit(self, X):
         return self
@@ -38,7 +42,13 @@ class DimensionalityReduction:
 
 class ClusteringWithTopic:
     def __init__(self, df, n_topics=3):
-        embedding_model = SentenceTransformer("nomic-ai/nomic-embed-text-v1", trust_remote_code=True)
+        embedding_device = get_embedding_device()
+        print(f"[device] clustering embedding device: {embedding_device}")
+        embedding_model = SentenceTransformer(
+            "nomic-ai/nomic-embed-text-v1",
+            trust_remote_code=True,
+            device=embedding_device,
+        )
         # umap_model = DimensionalityReduction()
         umap_model = UMAP(n_neighbors=15, n_components=5, min_dist=0.0, metric='cosine', init = 'pca')
         hdbscan_model = AgglomerativeClustering(n_clusters=n_topics)
@@ -75,7 +85,13 @@ class ClusteringWithTopic:
         初始化 ClusteringWithTopic，接受一个 n_topics_list，其中包含多个聚类数目，
         选取 silhouette_score 最高的结果。
         """
-        embedding_model = SentenceTransformer("nomic-ai/nomic-embed-text-v1", trust_remote_code=True)
+        embedding_device = get_embedding_device()
+        print(f"[device] clustering embedding device: {embedding_device}")
+        embedding_model = SentenceTransformer(
+            "nomic-ai/nomic-embed-text-v1",
+            trust_remote_code=True,
+            device=embedding_device,
+        )
         self.embeddings = embedding_model.encode(df, show_progress_bar=True)
         
         self.df = df

@@ -28,6 +28,9 @@ from markdown_pdf import MarkdownPdf, Section  # Assuming you are using markdown
 from typing import Any
 import xml.etree.ElementTree as ET
 
+def get_embedding_device() -> str:
+    return "cuda" if torch.cuda.is_available() else "cpu"
+
 def clean_str(input_str):
     input_str = str(input_str).strip().lower()
     if input_str == "none" or input_str == "nan" or len(input_str) == 0:
@@ -287,7 +290,12 @@ class ASG_system:
 
 
         # model_id = "meta-llama/Meta-Llama-3.1-8B-Instruct"
-        self.embedder = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        embedding_device = get_embedding_device()
+        print(f"[device] survey_generation_pipeline.main embedding device: {embedding_device}")
+        self.embedder = HuggingFaceEmbeddings(
+            model_name="sentence-transformers/all-MiniLM-L6-v2",
+            model_kwargs={"device": embedding_device},
+        )
         # self.pipeline = transformers.pipeline(
         #     "text-generation",
         #     model=model_id,
@@ -499,7 +507,16 @@ class ASG_system:
         
 
     def section_generation(self) -> None:
-        generateSurvey_qwen_new(self.survey_id, self.survey_title, self.collection_names_clustered, self.pipeline, self.citation_data, './txt')
+        generateSurvey_qwen_new(
+            self.survey_id,
+            self.survey_title,
+            self.collection_names_clustered,
+            self.pipeline,
+            self.citation_data,
+            self.embedder,
+            self.txt_path,
+            self.info_path,
+        )
 
     def citation_generation(self) -> None:
         """
