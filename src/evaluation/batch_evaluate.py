@@ -55,9 +55,14 @@ def parse_args() -> argparse.Namespace:
         help="Directory to write detailed JSON and CSV summaries.",
     )
     parser.add_argument(
+        "--eval-model",
         "--model",
-        default=os.getenv("MODEL"),
-        help="Judge model name. Defaults to MODEL from .env.",
+        dest="eval_model",
+        default=os.getenv("EVALUATE_MODEL") or os.getenv("MODEL"),
+        help=(
+            "Judge model name. Defaults to EVALUATE_MODEL from .env, "
+            "then falls back to MODEL."
+        ),
     )
     parser.add_argument(
         "--temperature",
@@ -682,8 +687,10 @@ def build_aggregate_summary(results: List[Dict[str, Any]], failures: List[Dict[s
 
 def main() -> None:
     args = parse_args()
-    if not args.model:
-        raise ValueError("No judge model provided. Set MODEL in .env or pass --model.")
+    if not args.eval_model:
+        raise ValueError(
+            "No judge model provided. Set EVALUATE_MODEL in .env or pass --eval-model."
+        )
 
     input_path = Path(args.input).resolve()
     output_dir = Path(args.output_dir).resolve()
@@ -697,7 +704,7 @@ def main() -> None:
     failures: List[Dict[str, Any]] = []
 
     print(f"Loaded {len(manifest)} topics from {input_path}")
-    print(f"Using judge model: {args.model}")
+    print(f"Using judge model: {args.eval_model}")
 
     for index, entry in enumerate(manifest, start=1):
         topic = normalize_text(entry.get("topic")) or f"item_{index}"
@@ -705,7 +712,7 @@ def main() -> None:
         try:
             result = evaluate_topic(
                 client=client,
-                model=args.model,
+                model=args.eval_model,
                 entry=entry,
                 base_dir=base_dir,
                 max_survey_chars=args.max_survey_chars,
@@ -737,7 +744,7 @@ def main() -> None:
         "config": {
             "input": str(input_path),
             "output_dir": str(output_dir),
-            "model": args.model,
+            "model": args.eval_model,
             "temperature": args.temperature,
             "max_survey_chars": args.max_survey_chars,
             "max_hypothesis_chars": args.max_hypothesis_chars,
