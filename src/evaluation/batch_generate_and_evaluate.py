@@ -191,6 +191,27 @@ def copy_if_exists(source: Path, destination: Path) -> None:
         shutil.copy2(source, destination)
 
 
+def hydrate_preprocessed_markdown_for_survey(survey_id: str, pdf_paths: List[str]) -> List[str]:
+    recommend_md_root = REPO_ROOT / "src" / "static" / "data" / "pdf" / "recommend_pdfs_md"
+    survey_md_root = ensure_dir(REPO_ROOT / "md" / survey_id)
+    copied_dirs: List[str] = []
+
+    for pdf_path in pdf_paths:
+        base_name = Path(pdf_path).stem
+        source_dir = recommend_md_root / base_name
+        target_dir = survey_md_root / base_name
+        source_md = source_dir / "auto" / f"{base_name}.md"
+        if not source_md.exists():
+            continue
+
+        if target_dir.exists():
+            shutil.rmtree(target_dir)
+        shutil.copytree(source_dir, target_dir)
+        copied_dirs.append(str(target_dir))
+
+    return copied_dirs
+
+
 def normalize_reference_source(source: str) -> str:
     normalized = normalize_text(source).lower()
     if normalized in {"local", "json", "json-db", "json_vec", "vector_db", "vectordb"}:
@@ -314,6 +335,12 @@ def generate_survey(
         runtime["papers_found"] = reference_download_result["papers_found"]
         runtime["downloaded_pdf_count"] = len(reference_download_result["downloaded_files"])
         runtime["failed_download_count"] = len(reference_download_result.get("failed_downloads", []))
+        preprocessed_md_dirs = hydrate_preprocessed_markdown_for_survey(
+            survey_id=survey_id,
+            pdf_paths=reference_download_result["downloaded_files"],
+        )
+        runtime["reused_preprocessed_markdown_count"] = len(preprocessed_md_dirs)
+        runtime["reused_preprocessed_markdown_dirs"] = preprocessed_md_dirs
 
     start = time.time()
     asg_system.parsing_pdfs()
