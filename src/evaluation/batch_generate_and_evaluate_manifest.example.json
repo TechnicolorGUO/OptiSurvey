@@ -1,0 +1,8 @@
+[
+  {
+    "topic": "Silicon Photonics for Optical Interconnects",
+    "source": "json_vec",
+    "json_folder": "src/static/local_pdfs",
+    "auto_download": true
+  }
+]

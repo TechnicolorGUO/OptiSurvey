@@ -36,6 +36,83 @@ REQUIRED_COLUMNS = (
     "unconditioned_hypothesis_path",
 )
 
+SCORE_RUBRIC = {
+    1: "Very poor. Major deficiencies. Not acceptable for serious research use.",
+    2: "Weak. Some relevant elements exist, but there are clear and substantial problems.",
+    3: "Adequate. Reasonably usable, but with noticeable limitations or omissions.",
+    4: "Strong. Good quality overall, with only minor weaknesses.",
+    5: "Excellent. Clear strength on this aspect, with minimal or no meaningful weakness.",
+}
+
+SURVEY_ASPECT_RUBRICS = {
+    "coverage": {
+        1: "Covers only a small fraction of the topic and misses major core areas.",
+        2: "Covers some important areas, but many important subtopics are missing or underdeveloped.",
+        3: "Covers the main topic reasonably, but still misses several meaningful subtopics or perspectives.",
+        4: "Covers most important subtopics well, with only minor omissions.",
+        5: "Comprehensively covers the topic, including major subtopics and relevant perspectives.",
+    },
+    "structure": {
+        1: "Poorly organized and hard to follow, with little logical progression.",
+        2: "Some structure exists, but ordering or transitions are often confusing.",
+        3: "Generally understandable structure, though some sections feel uneven or loosely connected.",
+        4: "Well organized with clear flow and mostly effective sectioning.",
+        5: "Exceptionally coherent, logically structured, and easy to navigate.",
+    },
+    "relevance": {
+        1: "Frequently off-topic or misaligned with the stated topic.",
+        2: "Partially on-topic, but includes substantial irrelevant or weakly related material.",
+        3: "Mostly on-topic, though there are some tangents or weakly relevant sections.",
+        4: "Highly relevant and focused, with only minor drift.",
+        5: "Fully aligned with the topic and consistently focused throughout.",
+    },
+    "technical_depth": {
+        1: "Superficial discussion with little technical substance or precision.",
+        2: "Limited technical detail; discussion stays shallow in many places.",
+        3: "Moderate technical depth, but some important details or nuances are missing.",
+        4: "Good technical depth with solid detail and useful specificity.",
+        5: "Deep, precise, and consistently technically informative for a research audience.",
+    },
+}
+
+HYPOTHESIS_ASPECT_RUBRICS = {
+    "novelty": {
+        1: "Obvious, generic, or derivative with little research value.",
+        2: "Some variation on known ideas, but limited originality.",
+        3: "Moderately interesting and somewhat original, though not especially distinctive.",
+        4: "Clearly novel or meaningfully fresh in framing, mechanism, or application.",
+        5: "Highly original, non-obvious, and strongly research-worthy.",
+    },
+    "clarity": {
+        1: "The claim is vague, ambiguous, or difficult to interpret.",
+        2: "Some intended meaning is visible, but the statement remains unclear in important ways.",
+        3: "Reasonably clear overall, though parts are underspecified or imprecise.",
+        4: "Clear and specific, with only minor ambiguity.",
+        5: "Exceptionally clear, precise, and easy to understand.",
+    },
+    "testability": {
+        1: "Not meaningfully falsifiable or lacks a credible way to test it.",
+        2: "Test idea exists, but is weak, incomplete, or hard to operationalize.",
+        3: "Moderately testable with a plausible but limited validation path.",
+        4: "Clearly testable with a sensible and actionable validation plan.",
+        5: "Strongly falsifiable and paired with a well-defined, rigorous evaluation path.",
+    },
+    "grounding": {
+        1: "Poorly motivated by the provided context and weakly connected to the topic.",
+        2: "Some contextual connection exists, but support is shallow or inconsistent.",
+        3: "Reasonably grounded, though the motivation or linkage could be stronger.",
+        4: "Well grounded in the provided context and clearly motivated.",
+        5: "Exceptionally well grounded, tightly connected to the context, and strongly justified.",
+    },
+    "potential_impact": {
+        1: "If validated, the idea would have minimal significance.",
+        2: "Limited practical or scientific importance.",
+        3: "Moderate importance with plausible value.",
+        4: "High potential value for the topic area.",
+        5: "Very high potential significance if validated, with strong research or application impact.",
+    },
+}
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -202,6 +279,25 @@ def normalize_text(value: Any) -> str:
     return str(value).strip()
 
 
+def format_score_rubric() -> str:
+    return "\n".join(
+        f"- {score}: {description}" for score, description in SCORE_RUBRIC.items()
+    )
+
+
+def format_aspect_rubrics(
+    aspects: Dict[str, str],
+    aspect_rubrics: Dict[str, Dict[int, str]],
+) -> str:
+    lines: List[str] = []
+    for aspect, description in aspects.items():
+        lines.append(f"- {aspect}: {description}")
+        rubric = aspect_rubrics[aspect]
+        for score in range(1, 6):
+            lines.append(f"  {score}: {rubric[score]}")
+    return "\n".join(lines)
+
+
 def read_manifest(input_path: Path) -> List[Dict[str, Any]]:
     suffix = input_path.suffix.lower()
     if suffix == ".json":
@@ -360,85 +456,39 @@ def load_text_payload(
     raise ValueError(f"Unsupported key prefix: {key_prefix}")
 
 
-def build_prompt(
-    topic: str,
-    survey_text: str,
-    conditioned_hypothesis: str,
-    unconditioned_hypothesis: str,
-) -> str:
-    survey_aspects = "\n".join(
-        f"- {name}: {description}" for name, description in SURVEY_ASPECTS.items()
-    )
-    hypothesis_aspects = "\n".join(
-        f"- {name}: {description}" for name, description in HYPOTHESIS_ASPECTS.items()
-    )
+def build_survey_prompt(topic: str, survey_text: str) -> str:
+    general_rubric = format_score_rubric()
+    survey_aspects = format_aspect_rubrics(SURVEY_ASPECTS, SURVEY_ASPECT_RUBRICS)
     return textwrap.dedent(
         f"""
-        Evaluate the following three research artifacts for the topic "{topic}".
-
-        Artifacts:
-        1. An OptiSurvey-generated review.
-        2. A hypothesis generated with access to the review.
-        3. A hypothesis generated without access to the review.
+        Evaluate the following OptiSurvey-generated academic survey for the topic "{topic}".
 
         Scoring instructions:
         - Use integer scores only: 1, 2, 3, 4, or 5.
         - Be strict and calibrated.
-        - Judge each artifact on its own merits.
-        - For the two hypotheses, use the review as context to judge how well grounded and research-relevant they are.
         - Keep rationales short and concrete.
+        - Follow the fixed 1-5 rubric below. Do not invent your own scale.
+
+        General 1-5 meaning:
+        {general_rubric}
 
         Survey aspects:
         {survey_aspects}
 
-        Hypothesis aspects:
-        {hypothesis_aspects}
-
-        Return JSON only with this exact top-level structure:
+        Return JSON only with this exact structure:
         {{
           "topic": "{topic}",
-          "survey": {{
-            "scores": {{
-              "coverage": 1,
-              "structure": 1,
-              "relevance": 1,
-              "technical_depth": 1
-            }},
-            "overall_score": 1,
-            "strengths": ["..."],
-            "weaknesses": ["..."],
-            "summary": "..."
+          "artifact_type": "survey",
+          "scores": {{
+            "coverage": 1,
+            "structure": 1,
+            "relevance": 1,
+            "technical_depth": 1
           }},
-          "conditioned_hypothesis": {{
-            "scores": {{
-              "novelty": 1,
-              "clarity": 1,
-              "testability": 1,
-              "grounding": 1,
-              "potential_impact": 1
-            }},
-            "overall_score": 1,
-            "strengths": ["..."],
-            "weaknesses": ["..."],
-            "summary": "..."
-          }},
-          "unconditioned_hypothesis": {{
-            "scores": {{
-              "novelty": 1,
-              "clarity": 1,
-              "testability": 1,
-              "grounding": 1,
-              "potential_impact": 1
-            }},
-            "overall_score": 1,
-            "strengths": ["..."],
-            "weaknesses": ["..."],
-            "summary": "..."
-          }},
-          "comparison": {{
-            "better_hypothesis": "conditioned|unconditioned|tie",
-            "reason": "..."
-          }}
+          "overall_score": 1,
+          "strengths": ["..."],
+          "weaknesses": ["..."],
+          "summary": "..."
         }}
 
         Topic:
@@ -448,15 +498,70 @@ def build_prompt(
         ---
         {survey_text}
         ---
+        """
+    ).strip()
 
-        Hypothesis generated with the review:
+
+def build_hypothesis_prompt(
+    topic: str,
+    survey_text: str,
+    hypothesis_text: str,
+    condition_label: str,
+) -> str:
+    general_rubric = format_score_rubric()
+    hypothesis_aspects = format_aspect_rubrics(
+        HYPOTHESIS_ASPECTS, HYPOTHESIS_ASPECT_RUBRICS
+    )
+    return textwrap.dedent(
+        f"""
+        Evaluate the following research hypothesis for the topic "{topic}".
+
+        Context:
+        - This hypothesis was generated under the condition: "{condition_label}".
+        - Use the provided survey only as reference context for judging topical grounding and research relevance.
+        - Evaluate only this single hypothesis. Do not compare it against any other hypothesis.
+
+        Scoring instructions:
+        - Use integer scores only: 1, 2, 3, 4, or 5.
+        - Be strict and calibrated.
+        - Keep rationales short and concrete.
+        - Follow the fixed 1-5 rubric below. Do not invent your own scale.
+
+        General 1-5 meaning:
+        {general_rubric}
+
+        Hypothesis aspects:
+        {hypothesis_aspects}
+
+        Return JSON only with this exact structure:
+        {{
+          "topic": "{topic}",
+          "artifact_type": "hypothesis",
+          "condition": "{condition_label}",
+          "scores": {{
+            "novelty": 1,
+            "clarity": 1,
+            "testability": 1,
+            "grounding": 1,
+            "potential_impact": 1
+          }},
+          "overall_score": 1,
+          "strengths": ["..."],
+          "weaknesses": ["..."],
+          "summary": "..."
+        }}
+
+        Topic:
+        {topic}
+
+        Reference survey context:
         ---
-        {conditioned_hypothesis}
+        {survey_text}
         ---
 
-        Hypothesis generated without the review:
+        Hypothesis to evaluate:
         ---
-        {unconditioned_hypothesis}
+        {hypothesis_text}
         ---
         """
     ).strip()
@@ -511,6 +616,26 @@ def normalize_eval_section(
     }
 
 
+def evaluate_artifact_section(
+    client: OpenAI,
+    model: str,
+    prompt: str,
+    expected_aspects: Dict[str, str],
+    temperature: float,
+    max_retries: int,
+) -> Tuple[Dict[str, Any], str]:
+    raw_response = call_llm(
+        client=client,
+        model=model,
+        prompt=prompt,
+        temperature=temperature,
+        max_retries=max_retries,
+    )
+    parsed = extract_json_object(raw_response)
+    normalized = normalize_eval_section(parsed, expected_aspects)
+    return normalized, raw_response
+
+
 def evaluate_topic(
     client: OpenAI,
     model: str,
@@ -541,39 +666,57 @@ def evaluate_topic(
         unconditioned_text, max_hypothesis_chars
     )
 
-    prompt = build_prompt(
+    survey_prompt = build_survey_prompt(
         topic=topic,
         survey_text=survey_text,
-        conditioned_hypothesis=conditioned_text,
-        unconditioned_hypothesis=unconditioned_text,
     )
-    raw_response = call_llm(
+    survey_eval, survey_raw_response = evaluate_artifact_section(
         client=client,
         model=model,
-        prompt=prompt,
+        prompt=survey_prompt,
+        expected_aspects=SURVEY_ASPECTS,
         temperature=temperature,
         max_retries=max_retries,
     )
-    parsed = extract_json_object(raw_response)
 
-    survey_eval = normalize_eval_section(parsed.get("survey", {}), SURVEY_ASPECTS)
-    conditioned_eval = normalize_eval_section(
-        parsed.get("conditioned_hypothesis", {}), HYPOTHESIS_ASPECTS
+    conditioned_prompt = build_hypothesis_prompt(
+        topic=topic,
+        survey_text=survey_text,
+        hypothesis_text=conditioned_text,
+        condition_label="conditioned_on_survey",
     )
-    unconditioned_eval = normalize_eval_section(
-        parsed.get("unconditioned_hypothesis", {}), HYPOTHESIS_ASPECTS
+    conditioned_eval, conditioned_raw_response = evaluate_artifact_section(
+        client=client,
+        model=model,
+        prompt=conditioned_prompt,
+        expected_aspects=HYPOTHESIS_ASPECTS,
+        temperature=temperature,
+        max_retries=max_retries,
     )
-    comparison = parsed.get("comparison", {})
-    better_hypothesis = normalize_text(comparison.get("better_hypothesis")).lower()
-    if better_hypothesis not in {"conditioned", "unconditioned", "tie"}:
-        cond_score = conditioned_eval["overall_score"]
-        uncond_score = unconditioned_eval["overall_score"]
-        if cond_score > uncond_score:
-            better_hypothesis = "conditioned"
-        elif uncond_score > cond_score:
-            better_hypothesis = "unconditioned"
-        else:
-            better_hypothesis = "tie"
+
+    unconditioned_prompt = build_hypothesis_prompt(
+        topic=topic,
+        survey_text=survey_text,
+        hypothesis_text=unconditioned_text,
+        condition_label="not_conditioned_on_survey",
+    )
+    unconditioned_eval, unconditioned_raw_response = evaluate_artifact_section(
+        client=client,
+        model=model,
+        prompt=unconditioned_prompt,
+        expected_aspects=HYPOTHESIS_ASPECTS,
+        temperature=temperature,
+        max_retries=max_retries,
+    )
+
+    cond_score = conditioned_eval["overall_score"]
+    uncond_score = unconditioned_eval["overall_score"]
+    if cond_score > uncond_score:
+        better_hypothesis = "conditioned"
+    elif uncond_score > cond_score:
+        better_hypothesis = "unconditioned"
+    else:
+        better_hypothesis = "tie"
 
     return {
         "topic": topic,
@@ -599,9 +742,13 @@ def evaluate_topic(
         "unconditioned_hypothesis": unconditioned_eval,
         "comparison": {
             "better_hypothesis": better_hypothesis,
-            "reason": normalize_text(comparison.get("reason")),
+            "reason": "Derived from separately evaluated overall hypothesis scores.",
         },
-        "raw_model_response": raw_response,
+        "raw_model_responses": {
+            "survey": survey_raw_response,
+            "conditioned_hypothesis": conditioned_raw_response,
+            "unconditioned_hypothesis": unconditioned_raw_response,
+        },
     }
 
 
