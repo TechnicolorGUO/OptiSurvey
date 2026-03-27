@@ -2897,7 +2897,7 @@ FONTS & ICONS
 	function updateOptiResearchPdfFrame() {
 		const frame = document.getElementById('optiresearch-pdf-frame');
 		const emptyState = document.getElementById('optiresearch-pdf-empty');
-		const activePdfUrl = optiResearchState.latexPdfUrl || '';
+		const activePdfUrl = optiResearchState.latexPdfUrl || optiResearchState.pdfUrl || '';
 
 		if (optiResearchState.enabled && activePdfUrl) {
 			if (frame.dataset.currentSrc !== activePdfUrl) {
@@ -4288,7 +4288,7 @@ function select_sections() {
 		}
 	}
 
-	function displayGeneratedPdf(type, surveyId) {
+	async function displayGeneratedPdf(type, surveyId) {
 		const downloadUrl = buildGeneratedPdfUrl(type, surveyId);
 		document.getElementById('pdf-preview-frame').src = downloadUrl;
 		document.getElementById('pdf-preview-section').style.display = 'block';
@@ -4302,19 +4302,14 @@ function select_sections() {
 
 		document.getElementById('pdf-preview-section').scrollIntoView({ behavior: 'smooth' });
 
-		if (type === 'latex') {
-			setOptiResearchState({
-				enabled: true,
-				chatEnabled: optiResearchState.chatEnabled,
-				surveyId: surveyId,
-				latexPdfUrl: downloadUrl
-			});
-			const chatLog = document.getElementById('optiresearch-chat-log');
-			if (!chatLog.querySelector('.optiresearch-message.user') && !chatLog.querySelector('.optiresearch-message.assistant')) {
-				chatLog.innerHTML = '';
-				renderOptiResearchMessage('system', 'The final LaTeX PDF is ready. You can now read the survey and ask questions about it.');
-			}
-		}
+		setOptiResearchState({
+			enabled: type === 'latex' ? true : optiResearchState.enabled,
+			surveyId: surveyId,
+			latexPdfUrl: type === 'latex' ? downloadUrl : optiResearchState.latexPdfUrl,
+			pdfUrl: type === 'pdf' ? downloadUrl : optiResearchState.pdfUrl
+		});
+
+		await syncOptiResearchState(surveyId);
 	}
 
 	async function pollAsyncDownload(operationId, type, fallbackSurveyId = null) {
@@ -4354,7 +4349,7 @@ function select_sections() {
 
 					updateProgressBar(100, 'PDF ready! Displaying in viewer...');
 					await new Promise(r => setTimeout(r, 500));
-					displayGeneratedPdf(type, surveyId);
+					await displayGeneratedPdf(type, surveyId);
 					break;
 				}
 
@@ -4367,7 +4362,7 @@ function select_sections() {
 					if (surveyId && await generatedPdfExists(type, surveyId)) {
 						updateProgressBar(100, 'PDF ready! Displaying in viewer...');
 						await new Promise(r => setTimeout(r, 500));
-						displayGeneratedPdf(type, surveyId);
+						await displayGeneratedPdf(type, surveyId);
 						break;
 					}
 
@@ -4381,7 +4376,7 @@ function select_sections() {
 				if (surveyId && await generatedPdfExists(type, surveyId)) {
 					updateProgressBar(100, 'PDF ready! Displaying in viewer...');
 					await new Promise(r => setTimeout(r, 500));
-					displayGeneratedPdf(type, surveyId);
+					await displayGeneratedPdf(type, surveyId);
 					break;
 				}
 
