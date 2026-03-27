@@ -16,9 +16,10 @@ load_dotenv()
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SRC_DIR = REPO_ROOT / "src"
+DEMO_DIR = SRC_DIR / "demo"
 SURVEY_PIPELINE_DIR = SRC_DIR / "demo" / "survey_generation_pipeline"
 
-for path in (str(SRC_DIR), str(SURVEY_PIPELINE_DIR), str(Path(__file__).resolve().parent)):
+for path in (str(SRC_DIR), str(DEMO_DIR), str(SURVEY_PIPELINE_DIR), str(Path(__file__).resolve().parent)):
     if path not in sys.path:
         sys.path.insert(0, path)
 
