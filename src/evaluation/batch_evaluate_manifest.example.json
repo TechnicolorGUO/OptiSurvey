@@ -1,0 +1,14 @@
+[
+  {
+    "topic": "Coherent Optical Communication Systems",
+    "survey_path": "path/to/survey.md",
+    "conditioned_hypothesis_path": "path/to/conditioned_hypothesis.json",
+    "unconditioned_hypothesis_path": "path/to/unconditioned_hypothesis.json"
+  },
+  {
+    "topic": "Free-Space Optical Communication Under Atmospheric Turbulence",
+    "survey_text": "Paste the generated survey here if you do not want to reference a file.",
+    "conditioned_hypothesis_text": "Paste the hypothesis generated with survey conditioning here.",
+    "unconditioned_hypothesis_text": "Paste the hypothesis generated without survey conditioning here."
+  }
+]
