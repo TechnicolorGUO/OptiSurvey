@@ -191,22 +191,57 @@ def copy_if_exists(source: Path, destination: Path) -> None:
         shutil.copy2(source, destination)
 
 
+def sanitize_filename_for_preprocessed_md(filename: str) -> str:
+    last_dot = filename.rfind(".")
+
+    def sanitize_part(part: str) -> str:
+        part = part.lower()
+        part = re.sub(r"[^a-z0-9]", " ", part)
+        part = re.sub(r"\s+", " ", part)
+        part = part.strip()
+        words = part.split(" ")
+        if len(words) == 0:
+            return ""
+        words[0] = words[0].capitalize()
+        return " ".join(words)
+
+    if last_dot == -1:
+        return sanitize_part(filename)
+    if last_dot == 0:
+        extension = filename[1:]
+        return "." + sanitize_part(extension)
+    name = filename[:last_dot]
+    extension = filename[last_dot + 1:]
+    return sanitize_part(name) + "." + sanitize_part(extension)
+
+
 def hydrate_preprocessed_markdown_for_survey(survey_id: str, pdf_paths: List[str]) -> List[str]:
     recommend_md_root = REPO_ROOT / "src" / "static" / "data" / "pdf" / "recommend_pdfs_md"
     survey_md_root = ensure_dir(REPO_ROOT / "md" / survey_id)
     copied_dirs: List[str] = []
 
     for pdf_path in pdf_paths:
-        base_name = Path(pdf_path).stem
-        source_dir = recommend_md_root / base_name
-        target_dir = survey_md_root / base_name
-        source_md = source_dir / "auto" / f"{base_name}.md"
+        original_base_name = Path(pdf_path).stem
+        mapped_dir_name = sanitize_filename_for_preprocessed_md(original_base_name)
+        source_dir = recommend_md_root / mapped_dir_name
+        target_dir = survey_md_root / original_base_name
+        source_md = source_dir / "auto" / f"{mapped_dir_name}.md"
         if not source_md.exists():
+            print(
+                f"[preprocessed-md] miss | pdf='{original_base_name}' mapped='{mapped_dir_name}' source='{source_md}'"
+            )
             continue
 
         if target_dir.exists():
             shutil.rmtree(target_dir)
         shutil.copytree(source_dir, target_dir)
+        source_auto_md = target_dir / "auto" / f"{mapped_dir_name}.md"
+        target_auto_md = target_dir / "auto" / f"{original_base_name}.md"
+        if source_auto_md.exists() and source_auto_md != target_auto_md:
+            source_auto_md.rename(target_auto_md)
+        print(
+            f"[preprocessed-md] hit  | pdf='{original_base_name}' mapped='{mapped_dir_name}' target='{target_auto_md}'"
+        )
         copied_dirs.append(str(target_dir))
 
     return copied_dirs

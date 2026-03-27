@@ -14,6 +14,70 @@ import shutil
 # nlp = spacy.load("en_core_web_sm")
 
 class DocumentLoading:
+    def _sanitize_preprocessed_markdown_name(self, filename):
+        last_dot = filename.rfind(".")
+
+        def sanitize_part(part):
+            part = part.lower()
+            part = re.sub(r"[^a-z0-9]", " ", part)
+            part = re.sub(r"\s+", " ", part)
+            part = part.strip()
+            words = part.split(" ")
+            if len(words) == 0:
+                return ""
+            words[0] = words[0].capitalize()
+            return " ".join(words)
+
+        if last_dot == -1:
+            return sanitize_part(filename)
+        if last_dot == 0:
+            return "." + sanitize_part(filename[1:])
+
+        name = filename[:last_dot]
+        extension = filename[last_dot + 1:]
+        return sanitize_part(name) + "." + sanitize_part(extension)
+
+    def _copy_preprocessed_markdown_if_available(self, pdf_file, output_dir="output", method="auto"):
+        base_name = os.path.splitext(os.path.basename(pdf_file))[0]
+        recommend_md_root = os.path.join("src", "static", "data", "pdf", "recommend_pdfs_md")
+        target_dir = os.path.join(output_dir, base_name)
+        target_md = os.path.join(target_dir, method, f"{base_name}.md")
+
+        candidate_names = []
+        for candidate_name in [base_name, self._sanitize_preprocessed_markdown_name(base_name)]:
+            if candidate_name and candidate_name not in candidate_names:
+                candidate_names.append(candidate_name)
+
+        for candidate_name in candidate_names:
+            source_dir = os.path.join(recommend_md_root, candidate_name)
+            source_auto_dir = os.path.join(source_dir, method)
+            source_md = os.path.join(source_auto_dir, f"{candidate_name}.md")
+            if not os.path.isdir(source_auto_dir):
+                continue
+
+            if not os.path.exists(source_md):
+                md_files = [name for name in os.listdir(source_auto_dir) if name.endswith(".md")]
+                if not md_files:
+                    continue
+                source_md = os.path.join(source_auto_dir, md_files[0])
+
+            if os.path.exists(target_dir):
+                shutil.rmtree(target_dir)
+            shutil.copytree(source_dir, target_dir)
+
+            copied_md = os.path.join(target_dir, method, os.path.basename(source_md))
+            if os.path.exists(copied_md) and copied_md != target_md:
+                os.replace(copied_md, target_md)
+
+            if os.path.exists(target_md):
+                print(
+                    f"Reused pre-processed markdown for {base_name} from {source_dir}. Skipping MinerU.",
+                    flush=True,
+                )
+                return True
+
+        print(f"No reusable pre-processed markdown found for {base_name}. Running MinerU.", flush=True)
+        return False
     def convert_pdf_to_md(self, pdf_file, output_dir="output", method="auto"):
         base_name = os.path.splitext(os.path.basename(pdf_file))[0]
         target_dir = os.path.join(output_dir, base_name)
@@ -26,6 +90,9 @@ class DocumentLoading:
             return
             
         # 执行转换命令
+        if self._copy_preprocessed_markdown_if_available(pdf_file, output_dir, method):
+            return
+
         command = ["mineru", "-p", pdf_file, "-o", output_dir, "-m", method]
         try:
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
