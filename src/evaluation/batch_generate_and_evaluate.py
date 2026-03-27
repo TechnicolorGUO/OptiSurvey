@@ -40,11 +40,17 @@ _DJANGO_IMPORTS: Optional[Tuple[Any, Any, Any, Any, Any, Any, Any, Any, Any]] = 
 def get_pipeline_imports() -> Tuple[Any, Any, Any]:
     global _PIPELINE_IMPORTS
     if _PIPELINE_IMPORTS is None:
-        from main import ASG_system  # type: ignore
-        from asg_retriever import Retriever  # type: ignore
-        from asg_generator import getQwenClient  # type: ignore
+        import importlib
 
-        _PIPELINE_IMPORTS = (ASG_system, Retriever, getQwenClient)
+        pipeline_main = importlib.import_module("survey_generation_pipeline.main")
+        pipeline_retriever = importlib.import_module("survey_generation_pipeline.asg_retriever")
+        pipeline_generator = importlib.import_module("survey_generation_pipeline.asg_generator")
+
+        _PIPELINE_IMPORTS = (
+            pipeline_main.ASG_system,
+            pipeline_retriever.Retriever,
+            pipeline_generator.getQwenClient,
+        )
     return _PIPELINE_IMPORTS
 
 
