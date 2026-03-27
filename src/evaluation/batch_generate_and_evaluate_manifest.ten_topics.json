@@ -1,0 +1,62 @@
+[
+  {
+    "topic": "Silicon Photonics for Optical Interconnects",
+    "source": "json_vec",
+    "json_folder": "src/static/local_pdfs",
+    "auto_download": true
+  },
+  {
+    "topic": "Photonic Switching Architectures for Data Center Networks",
+    "source": "json_vec",
+    "json_folder": "src/static/local_pdfs",
+    "auto_download": true
+  },
+  {
+    "topic": "Co-Packaged Optics for AI and HPC Systems",
+    "source": "json_vec",
+    "json_folder": "src/static/local_pdfs",
+    "auto_download": true
+  },
+  {
+    "topic": "Integrated Optical Transceivers for Short-Reach Communications",
+    "source": "json_vec",
+    "json_folder": "src/static/local_pdfs",
+    "auto_download": true
+  },
+  {
+    "topic": "Large-Scale Silicon Photonic Switch Fabrics",
+    "source": "json_vec",
+    "json_folder": "src/static/local_pdfs",
+    "auto_download": true
+  },
+  {
+    "topic": "Microring Resonator Devices for Optical Communication Systems",
+    "source": "json_vec",
+    "json_folder": "src/static/local_pdfs",
+    "auto_download": true
+  },
+  {
+    "topic": "Low-Loss Waveguides and Packaging for Silicon Photonics",
+    "source": "json_vec",
+    "json_folder": "src/static/local_pdfs",
+    "auto_download": true
+  },
+  {
+    "topic": "Photonic Integrated Circuits for High-Speed Modulation",
+    "source": "json_vec",
+    "json_folder": "src/static/local_pdfs",
+    "auto_download": true
+  },
+  {
+    "topic": "Optical Network Architectures Enabled by Photonic Integration",
+    "source": "json_vec",
+    "json_folder": "src/static/local_pdfs",
+    "auto_download": true
+  },
+  {
+    "topic": "Heterogeneous Integration in Silicon Photonic Platforms",
+    "source": "json_vec",
+    "json_folder": "src/static/local_pdfs",
+    "auto_download": true
+  }
+]
