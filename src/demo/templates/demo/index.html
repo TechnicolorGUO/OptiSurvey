@@ -394,34 +394,6 @@ textarea {
 	gap: 18px;
 }
 
-.library-nebula-stat-grid {
-	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-	gap: 12px;
-}
-
-.library-nebula-stat {
-	padding: 14px 16px;
-	border-radius: 18px;
-	background: linear-gradient(180deg, rgba(14, 31, 50, 0.98) 0%, rgba(8, 20, 34, 0.98) 100%);
-	border: 1px solid rgba(125, 211, 252, 0.12);
-}
-
-.library-nebula-stat strong {
-	display: block;
-	font-size: 28px;
-	color: #f8fbff;
-}
-
-.library-nebula-stat span {
-	display: block;
-	margin-top: 4px;
-	font-size: 12px;
-	letter-spacing: 0.06em;
-	text-transform: uppercase;
-	color: rgba(224, 242, 254, 0.62);
-}
-
 .library-nebula-block {
 	padding: 18px;
 	border-radius: 20px;
@@ -439,6 +411,7 @@ textarea {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 8px;
+	align-content: flex-start;
 }
 
 .library-nebula-chip {
@@ -459,24 +432,41 @@ textarea {
 	flex-shrink: 0;
 }
 
+.library-nebula-cluster-count {
+	color: rgba(224, 242, 254, 0.64);
+	font-size: 12px;
+}
+
 .library-nebula-detail {
-	display: grid;
-	gap: 12px;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 14px;
 	color: rgba(224, 242, 254, 0.82);
 	line-height: 1.6;
 }
 
-.library-nebula-detail-title {
-	margin: 0;
-	font-size: 22px;
-	line-height: 1.35;
-	color: #f8fbff;
+.library-nebula-detail-card {
+	flex: 1 1 220px;
+	min-width: 0;
+	padding: 16px 18px;
+	border-radius: 18px;
+	background: linear-gradient(180deg, rgba(11, 25, 40, 0.98) 0%, rgba(7, 18, 30, 0.98) 100%);
+	border: 1px solid rgba(125, 211, 252, 0.12);
 }
 
-.library-nebula-detail-meta {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 10px;
+.library-nebula-detail-card h5 {
+	margin: 0 0 8px;
+	font-size: 12px;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: rgba(224, 242, 254, 0.62);
+}
+
+.library-nebula-detail-title {
+	margin: 0;
+	font-size: 20px;
+	line-height: 1.35;
+	color: #f8fbff;
 }
 
 .library-nebula-pill {
@@ -493,6 +483,10 @@ textarea {
 	font-size: 13px;
 	color: rgba(192, 214, 233, 0.74);
 	word-break: break-all;
+}
+
+.library-nebula-detail-empty {
+	color: rgba(224, 242, 254, 0.72);
 }
 
 .library-nebula-link {
@@ -1632,10 +1626,6 @@ textarea {
 	      height: 420px;
 	    }
 
-	    .library-nebula-stat-grid {
-	      grid-template-columns: 1fr 1fr;
-	    }
-
 	    .optiresearch-panel {
 	      inset: 12px;
 	      grid-template-columns: 1fr;
@@ -1887,33 +1877,17 @@ FONTS & ICONS
 					</div>
 					<div class="col-md-4">
 						<div class="library-nebula-sidebar">
-							<div class="library-nebula-stat-grid">
-								<div class="library-nebula-stat">
-									<strong id="library-nebula-total-papers">0</strong>
-									<span>Papers</span>
-								</div>
-								<div class="library-nebula-stat">
-									<strong id="library-nebula-total-sources">0</strong>
-									<span>Collections</span>
-								</div>
-								<div class="library-nebula-stat">
-									<strong id="library-nebula-layout-mode">-</strong>
-									<span>Layout</span>
-								</div>
-								<div class="library-nebula-stat">
-									<strong id="library-nebula-embedding-model">-</strong>
-									<span>Embedding</span>
-								</div>
-							</div>
 							<div class="library-nebula-block">
-								<h4>Collections</h4>
+								<h4>Clustering Result</h4>
 								<div id="library-nebula-legend" class="library-nebula-legend"></div>
 							</div>
-							<div class="library-nebula-block">
-								<h4>Paper Detail</h4>
-								<div id="library-nebula-detail" class="library-nebula-detail">
-									<div>Select a star to inspect the paper title, source collection, and PDF link.</div>
-								</div>
+						</div>
+					</div>
+					<div class="col-md-12" style="margin-top: 18px;">
+						<div class="library-nebula-block">
+							<h4>Paper Detail</h4>
+							<div id="library-nebula-detail" class="library-nebula-detail">
+								<div class="library-nebula-detail-empty">Select a star to inspect the paper title, semantic cluster, source collection, and PDF link.</div>
 							</div>
 						</div>
 					</div>
@@ -2680,38 +2654,27 @@ FONTS & ICONS
 			empty.classList.toggle('is-visible', Boolean(visible));
 		}
 
-		function updateLibraryNebulaStats(payload) {
-			const stats = payload && payload.stats ? payload.stats : {};
-			document.getElementById('library-nebula-total-papers').textContent = stats.total_papers || 0;
-			document.getElementById('library-nebula-total-sources').textContent = stats.total_sources || 0;
-			document.getElementById('library-nebula-layout-mode').textContent = (stats.layout || '-').replace(/title-embedding-2d/, '2D');
-			document.getElementById('library-nebula-embedding-model').textContent = stats.embedding_model || '-';
-		}
-
 		function renderLibraryNebulaLegend(payload) {
 			const legend = document.getElementById('library-nebula-legend');
-			const sources = Array.isArray(payload.sources) ? payload.sources : [];
-			if (!sources.length) {
-				legend.innerHTML = '<span class="library-nebula-chip">No collections loaded</span>';
+			const clusters = Array.isArray(payload.clusters) ? payload.clusters : [];
+			if (!clusters.length) {
+				legend.innerHTML = '<span class="library-nebula-chip">No semantic clusters available</span>';
 				return;
 			}
 
-			legend.innerHTML = sources.slice(0, 12).map(source => `
+			legend.innerHTML = clusters.map(cluster => `
 				<span class="library-nebula-chip">
-					<span class="library-nebula-chip-dot" style="background:${escapeHtml(source.color)};"></span>
-					${escapeHtml(source.name)} (${escapeHtml(source.count)})
+					<span class="library-nebula-chip-dot" style="background:${escapeHtml(cluster.color)};"></span>
+					${escapeHtml(cluster.name)}
+					<span class="library-nebula-cluster-count">${escapeHtml(cluster.count)}</span>
 				</span>
 			`).join('');
-
-			if (sources.length > 12) {
-				legend.innerHTML += `<span class="library-nebula-chip">+${sources.length - 12} more</span>`;
-			}
 		}
 
 		function renderLibraryNebulaDetail(point) {
 			const detail = document.getElementById('library-nebula-detail');
 			if (!point) {
-				detail.innerHTML = '<div>Select a star to inspect the paper title, source collection, and PDF link.</div>';
+				detail.innerHTML = '<div class="library-nebula-detail-empty">Select a star to inspect the paper title, semantic cluster, source collection, and PDF link.</div>';
 				return;
 			}
 
@@ -2720,13 +2683,23 @@ FONTS & ICONS
 				: '<div class="library-nebula-pill">PDF path not web-accessible</div>';
 
 			detail.innerHTML = `
-				<h3 class="library-nebula-detail-title">${escapeHtml(point.display_title || point.title)}</h3>
-				<div class="library-nebula-detail-meta">
-					<span class="library-nebula-pill">Collection: ${escapeHtml(point.source)}</span>
-					<span class="library-nebula-pill">ID: ${escapeHtml(point.id)}</span>
+				<div class="library-nebula-detail-card" style="flex-basis: 360px;">
+					<h5>Title</h5>
+					<h3 class="library-nebula-detail-title">${escapeHtml(point.display_title || point.title)}</h3>
 				</div>
-				<div class="library-nebula-detail-path">${escapeHtml(point.pdf_path || '')}</div>
-				${pdfLink}
+				<div class="library-nebula-detail-card">
+					<h5>Semantic Cluster</h5>
+					<div class="library-nebula-pill" style="background:${escapeHtml(point.color)}; color:#04111d;">${escapeHtml(point.cluster_name || 'Unclustered')}</div>
+				</div>
+				<div class="library-nebula-detail-card">
+					<h5>Source Collection</h5>
+					<div>${escapeHtml(point.source || '')}</div>
+				</div>
+				<div class="library-nebula-detail-card" style="flex-basis: 320px;">
+					<h5>PDF</h5>
+					<div class="library-nebula-detail-path">${escapeHtml(point.pdf_path || '')}</div>
+					<div style="margin-top: 12px;">${pdfLink}</div>
+				</div>
 			`;
 		}
 
@@ -2748,22 +2721,23 @@ FONTS & ICONS
 			const totalPapers = payload && payload.stats ? payload.stats.total_papers || 0 : 0;
 			const pointSize = getLibraryNebulaPointSize(totalPapers);
 			(payload.points || []).forEach(point => {
-				if (!grouped[point.source]) {
-					grouped[point.source] = [];
+				const groupKey = String(point.cluster_id);
+				if (!grouped[groupKey]) {
+					grouped[groupKey] = [];
 				}
-				grouped[point.source].push({
+				grouped[groupKey].push({
 					...point,
 					value: [point.x, point.y],
 					symbolSize: pointSize
 				});
 			});
 
-			return (payload.sources || []).map(source => ({
-				name: source.name,
+			return (payload.clusters || []).map(cluster => ({
+				name: cluster.name,
 				type: 'scatter',
-				data: grouped[source.name] || [],
+				data: grouped[String(cluster.id)] || [],
 				itemStyle: {
-					color: source.color,
+					color: cluster.color,
 					opacity: 0.46,
 					shadowBlur: 0
 				},
@@ -2784,16 +2758,29 @@ FONTS & ICONS
 				libraryNebulaState.chart = echarts.init(chartElement, null, { renderer: 'canvas' });
 			}
 
-			const series = buildLibraryNebulaSeries(payload);
-			libraryNebulaState.chart.setOption({
-				animationDuration: 900,
-				animationEasing: 'quarticOut',
-				backgroundColor: 'transparent',
-				grid: {
-					top: 10,
-					right: 10,
-					bottom: 10,
-					left: 10
+				const series = buildLibraryNebulaSeries(payload);
+				libraryNebulaState.chart.setOption({
+					animationDuration: 900,
+					animationEasing: 'quarticOut',
+					backgroundColor: 'transparent',
+					toolbox: {
+						right: 8,
+						top: 4,
+						iconStyle: {
+							borderColor: '#9bdcf7'
+						},
+						feature: {
+							dataZoom: {
+								yAxisIndex: 'none'
+							},
+							restore: {}
+						}
+					},
+					grid: {
+						top: 10,
+						right: 10,
+						bottom: 10,
+						left: 10
 				},
 				tooltip: {
 					trigger: 'item',
@@ -2813,18 +2800,36 @@ FONTS & ICONS
 						`;
 					}
 				},
-				xAxis: {
-					type: 'value',
-					show: false,
-					scale: true
-				},
-				yAxis: {
-					type: 'value',
-					show: false,
-					scale: true
-				},
-				series: series
-			}, true);
+					xAxis: {
+						type: 'value',
+						show: false,
+						scale: true
+					},
+					yAxis: {
+						type: 'value',
+						show: false,
+						scale: true
+					},
+					dataZoom: [
+						{
+							type: 'inside',
+							xAxisIndex: 0,
+							filterMode: 'none',
+							moveOnMouseMove: true,
+							moveOnMouseWheel: true,
+							zoomOnMouseWheel: true
+						},
+						{
+							type: 'inside',
+							yAxisIndex: 0,
+							filterMode: 'none',
+							moveOnMouseMove: true,
+							moveOnMouseWheel: true,
+							zoomOnMouseWheel: true
+						}
+					],
+					series: series
+				}, true);
 
 			libraryNebulaState.chart.off('click');
 			libraryNebulaState.chart.on('click', function(params) {
@@ -2865,7 +2870,6 @@ FONTS & ICONS
 
 				libraryNebulaState.payload = payload;
 				libraryNebulaState.hasLoaded = true;
-				updateLibraryNebulaStats(payload);
 				renderLibraryNebulaLegend(payload);
 
 				if (!Array.isArray(payload.points) || payload.points.length === 0) {
@@ -2879,14 +2883,13 @@ FONTS & ICONS
 				}
 
 				renderLibraryNebulaChart(payload);
-				setLibraryNebulaStatus(`Loaded ${payload.stats.total_papers} papers across ${payload.stats.total_sources} collections.`, false);
-				setLibraryNebulaSummary(`Loaded ${payload.stats.total_papers} papers across ${payload.stats.total_sources} collections. Click any point to inspect it.`);
+				setLibraryNebulaStatus(`Loaded ${payload.stats.total_papers} papers across ${payload.stats.total_clusters} semantic clusters.`, false);
+				setLibraryNebulaSummary(`Loaded ${payload.stats.total_papers} papers across ${payload.stats.total_clusters} semantic clusters. Mouse wheel to zoom, drag to pan, click a point for detail.`);
 				setLibraryNebulaEmpty('', false);
 				renderLibraryNebulaDetail(payload.points[0]);
 			} catch (error) {
 				console.error(error);
-				updateLibraryNebulaStats({ stats: {} });
-				renderLibraryNebulaLegend({ sources: [] });
+				renderLibraryNebulaLegend({ clusters: [] });
 				setLibraryNebulaStatus(error.message || 'Failed to load library nebula.', true);
 				setLibraryNebulaEmpty(error.message || 'Failed to load library nebula.', true);
 				setLibraryNebulaSummary(error.message || 'Failed to load library nebula.');

@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+from sklearn.cluster import MiniBatchKMeans
 from sklearn.decomposition import PCA, TruncatedSVD
 from sklearn.feature_extraction.text import TfidfVectorizer
 
@@ -22,6 +23,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_JSON_ROOT = PROJECT_ROOT / "src" / "static" / "local_pdfs"
 CACHE_PATH = PROJECT_ROOT / "src" / "static" / "data" / "cache" / "library_nebula.json"
 EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
+CACHE_VERSION = "v2-clustered"
 PALETTE = [
     "#7dd3fc",
     "#38bdf8",
@@ -49,6 +51,7 @@ def _resolve_json_root(root: str | Path | None = None) -> Path:
 
 def _compute_signature(json_files: list[Path]) -> str:
     digest = hashlib.sha256()
+    digest.update(CACHE_VERSION.encode("utf-8"))
     for path in json_files:
         stat = path.stat()
         try:
@@ -203,35 +206,114 @@ def _project_embeddings(embeddings: np.ndarray) -> np.ndarray:
     return (coords / scale) * 100.0
 
 
-def _build_payload(entries: list[dict[str, Any]], signature: str, embedding_model: str) -> dict[str, Any]:
-    source_counts = Counter(entry["source"] for entry in entries)
-    sorted_sources = sorted(source_counts.items(), key=lambda item: (-item[1], item[0].lower()))
-    source_colors = {
-        source_name: PALETTE[index % len(PALETTE)]
-        for index, (source_name, _) in enumerate(sorted_sources)
-    }
+def _choose_cluster_count(total: int) -> int:
+    if total <= 1:
+        return 1
+    heuristic = int(round(math.log2(total)))
+    return max(2, min(total, min(12, max(4, heuristic))))
+
+
+def _format_cluster_label(terms: list[str], fallback_index: int) -> str:
+    cleaned = []
+    for term in terms:
+        term = " ".join(term.split()).strip()
+        if not term:
+            continue
+        cleaned.append(term.title())
+    if not cleaned:
+        return f"Cluster {fallback_index + 1}"
+    if len(cleaned) == 1:
+        return cleaned[0]
+    return " / ".join(cleaned[:2])
+
+
+def _summarize_cluster_titles(cluster_titles: list[str], fallback_index: int) -> str:
+    if not cluster_titles:
+        return f"Cluster {fallback_index + 1}"
+
+    try:
+        vectorizer = TfidfVectorizer(stop_words="english", ngram_range=(1, 2), max_features=512)
+        matrix = vectorizer.fit_transform(cluster_titles)
+        scores = np.asarray(matrix.sum(axis=0)).ravel()
+        vocab = np.asarray(vectorizer.get_feature_names_out())
+        ranked_terms = [vocab[index] for index in scores.argsort()[::-1] if scores[index] > 0]
+        return _format_cluster_label(ranked_terms[:4], fallback_index)
+    except Exception:
+        return f"Cluster {fallback_index + 1}"
+
+
+def _cluster_entries(entries: list[dict[str, Any]], embeddings: np.ndarray) -> list[dict[str, Any]]:
+    total = len(entries)
+    if total == 0:
+        return []
+
+    cluster_count = _choose_cluster_count(total)
+    if cluster_count == 1:
+        return [
+            {
+                "id": 0,
+                "name": "All Papers",
+                "count": total,
+            }
+        ]
+
+    model = MiniBatchKMeans(
+        n_clusters=cluster_count,
+        random_state=42,
+        batch_size=min(1024, max(256, total // 2)),
+        n_init=10,
+    )
+    labels = model.fit_predict(embeddings)
+
+    grouped_titles: dict[int, list[str]] = {}
+    for entry, label in zip(entries, labels):
+        entry["cluster_id"] = int(label)
+        grouped_titles.setdefault(int(label), []).append(entry["display_title"])
+
+    cluster_rows = []
+    for cluster_id, titles in grouped_titles.items():
+        cluster_rows.append(
+            {
+                "id": cluster_id,
+                "name": _summarize_cluster_titles(titles, cluster_id),
+                "count": len(titles),
+            }
+        )
+
+    cluster_rows.sort(key=lambda row: (-row["count"], row["name"].lower()))
+    cluster_order = {row["id"]: index for index, row in enumerate(cluster_rows)}
+    color_map = {row["id"]: PALETTE[index % len(PALETTE)] for index, row in enumerate(cluster_rows)}
+    name_map = {row["id"]: row["name"] for row in cluster_rows}
 
     for entry in entries:
-        entry["color"] = source_colors[entry["source"]]
+        cluster_id = entry["cluster_id"]
+        entry["cluster_rank"] = cluster_order[cluster_id]
+        entry["cluster_name"] = name_map[cluster_id]
+        entry["color"] = color_map[cluster_id]
 
+    for row in cluster_rows:
+        row["color"] = color_map[row["id"]]
+
+    return cluster_rows
+
+
+def _build_payload(
+    entries: list[dict[str, Any]],
+    signature: str,
+    embedding_model: str,
+    clusters: list[dict[str, Any]],
+) -> dict[str, Any]:
     return {
         "status": "ready",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "signature": signature,
         "stats": {
             "total_papers": len(entries),
-            "total_sources": len(sorted_sources),
+            "total_clusters": len(clusters),
             "embedding_model": embedding_model,
             "layout": "title-embedding-2d",
         },
-        "sources": [
-            {
-                "name": source_name,
-                "count": count,
-                "color": source_colors[source_name],
-            }
-            for source_name, count in sorted_sources
-        ],
+        "clusters": clusters,
         "points": entries,
     }
 
@@ -243,11 +325,11 @@ def _empty_payload(message: str) -> dict[str, Any]:
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "stats": {
             "total_papers": 0,
-            "total_sources": 0,
+            "total_clusters": 0,
             "embedding_model": "",
             "layout": "title-embedding-2d",
         },
-        "sources": [],
+        "clusters": [],
         "points": [],
     }
 
@@ -288,14 +370,15 @@ def get_library_nebula_payload(force_rebuild: bool = False, json_root: str | Pat
     titles = [entry["title"] for entry in entries]
     embeddings, embedding_model = _embed_titles(titles)
     coords = _project_embeddings(embeddings)
+    clusters = _cluster_entries(entries, embeddings)
 
-    source_counts = Counter(entry["source"] for entry in entries)
+    cluster_counts = Counter(entry["cluster_id"] for entry in entries)
     for index, entry in enumerate(entries):
-        source_size = source_counts[entry["source"]]
+        cluster_size = cluster_counts[entry["cluster_id"]]
         entry["x"] = round(float(coords[index, 0]), 4)
         entry["y"] = round(float(coords[index, 1]), 4)
-        entry["symbol_size"] = max(8, min(18, 8 + int(math.log2(source_size + 1) * 2)))
+        entry["symbol_size"] = max(6, min(14, 6 + int(math.log2(cluster_size + 1))))
 
-    payload = _build_payload(entries, signature, embedding_model)
+    payload = _build_payload(entries, signature, embedding_model, clusters)
     _write_cache(payload)
     return payload
