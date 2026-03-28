@@ -275,18 +275,30 @@ textarea {
 }
 
 .library-nebula-shell {
-	margin: 8px 0 36px;
-	padding: 28px;
-	border-radius: 30px;
-	background:
-		radial-gradient(circle at top left, rgba(56, 189, 248, 0.22), transparent 28%),
-		radial-gradient(circle at top right, rgba(244, 114, 182, 0.14), transparent 24%),
-		linear-gradient(145deg, #06121f 0%, #0b1d31 52%, #132a41 100%);
-	box-shadow: 0 30px 80px rgba(6, 18, 31, 0.24);
-	color: #e5f0ff;
+	position: fixed;
+	inset: 0;
+	z-index: 1200;
+	display: none;
+	background: rgba(4, 16, 28, 0.66);
+	backdrop-filter: blur(6px);
 }
 
-.library-nebula-header {
+.library-nebula-shell.is-open {
+	display: block;
+}
+
+.library-nebula-panel {
+	position: absolute;
+	inset: 24px;
+	padding: 18px;
+	border-radius: 24px;
+	background: linear-gradient(135deg, #091827 0%, #0f2235 52%, #142b41 100%);
+	box-shadow: 0 24px 60px rgba(4, 16, 28, 0.28);
+	color: #e5f0ff;
+	overflow: auto;
+}
+
+.library-nebula-panel-header {
 	display: flex;
 	align-items: flex-start;
 	justify-content: space-between;
@@ -294,26 +306,33 @@ textarea {
 	margin-bottom: 22px;
 }
 
-.library-nebula-actions {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-}
-
-.library-nebula-header h2 {
+.library-nebula-panel-header h3 {
 	margin: 0;
 	font-size: 30px;
 	color: #f8fbff;
 }
 
-.library-nebula-header p {
+.library-nebula-panel-header p {
 	margin: 8px 0 0;
 	max-width: 760px;
 	color: rgba(229, 240, 255, 0.78);
 	line-height: 1.7;
 }
 
-.library-nebula-toggle,
+.library-nebula-panel-actions {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.library-nebula-panel .optiresearch-close {
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.12);
+	color: #f8fbff;
+	width: 38px;
+	height: 38px;
+}
+
 .library-nebula-refresh {
 	border: 1px solid rgba(125, 211, 252, 0.34);
 	border-radius: 999px;
@@ -322,12 +341,8 @@ textarea {
 	padding: 8px 16px;
 }
 
-.library-nebula-toggle {
-	min-width: 140px;
-}
-
-.library-nebula-content[hidden] {
-	display: none !important;
+.library-nebula-content {
+	padding: 6px 0;
 }
 
 .library-nebula-stage,
@@ -596,14 +611,23 @@ textarea {
     color: #333;
   }
 
-  .workspace-entry {
+  .workspace-entry-stack {
     position: fixed;
     top: 20px;
     right: 24px;
     z-index: 1100;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-end;
+  }
+
+  .workspace-entry {
     display: inline-flex;
     align-items: center;
+    justify-content: space-between;
     gap: 10px;
+    min-width: 260px;
     padding: 12px 18px;
     border: none;
     border-radius: 999px;
@@ -627,6 +651,10 @@ textarea {
   .workspace-entry-status {
     font-size: 12px;
     color: rgba(255, 255, 255, 0.78);
+  }
+
+  .workspace-entry-secondary {
+    background: #123957;
   }
 
   .optiresearch-shell {
@@ -1607,16 +1635,32 @@ textarea {
   }
 
 	  @media (max-width: 1100px) {
-	    .library-nebula-header {
+	    .workspace-entry-stack {
+	      top: 12px;
+	      right: 12px;
+	      left: 12px;
+	      align-items: stretch;
+	    }
+
+	    .workspace-entry {
+	      width: 100%;
+	      justify-content: space-between;
+	    }
+
+	    .library-nebula-panel {
+	      inset: 12px;
+	    }
+
+	    .library-nebula-panel-header {
 	      flex-direction: column;
-	}
+	    }
 
 	    .library-nebula-stage,
 	    .library-nebula-sidebar {
 	      min-height: auto;
 	    }
 
-	    .library-nebula-actions {
+	    .library-nebula-panel-actions {
 	      width: 100%;
 	      justify-content: flex-start;
 	      flex-wrap: wrap;
@@ -1680,10 +1724,16 @@ FONTS & ICONS
 
 <body>
 {% block body %}
-<button id="optiresearch-entry" class="workspace-entry" type="button" onclick="openOptiResearchWorkspace()" disabled>
-	<span><i class="fas fa-book-open"></i> OptiResearch</span>
-	<span id="optiresearch-entry-status" class="workspace-entry-status">Waiting for LaTeX PDF</span>
-</button>
+<div class="workspace-entry-stack">
+	<button id="optiresearch-entry" class="workspace-entry" type="button" onclick="openOptiResearchWorkspace()" disabled>
+		<span><i class="fas fa-book-open"></i> OptiResearch</span>
+		<span id="optiresearch-entry-status" class="workspace-entry-status">Waiting for LaTeX PDF</span>
+	</button>
+	<button id="library-nebula-entry" class="workspace-entry workspace-entry-secondary" type="button" onclick="openLibraryNebulaWorkspace()">
+		<span><i class="fas fa-project-diagram"></i> Library Nebula</span>
+		<span class="workspace-entry-status">Semantic library map</span>
+	</button>
+</div>
 
 <div id="optiresearch-shell" class="optiresearch-shell" aria-hidden="true">
 	<div class="optiresearch-panel">
@@ -1836,6 +1886,52 @@ FONTS & ICONS
 	</div>
 </div>
 
+<div id="library-nebula-shell" class="library-nebula-shell" aria-hidden="true">
+	<div class="library-nebula-panel">
+		<div class="library-nebula-panel-header">
+			<div>
+				<h3>Research Library Nebula</h3>
+				<p id="library-nebula-summary">Semantic layout of your cached Vector DB papers. Zoom, pan, and inspect cluster structure without affecting the main page.</p>
+			</div>
+			<div class="library-nebula-panel-actions">
+				<button id="library-nebula-refresh" type="button" class="library-nebula-refresh" onclick="loadLibraryNebula(true)">
+					<i class="fas fa-sync-alt"></i> Refresh Map
+				</button>
+				<button type="button" class="optiresearch-close" onclick="closeLibraryNebulaWorkspace()">&times;</button>
+			</div>
+		</div>
+		<div id="library-nebula-content" class="library-nebula-content">
+			<div class="row">
+				<div class="col-md-8">
+					<div class="library-nebula-stage">
+						<div class="library-nebula-stage-meta">
+							<span id="library-nebula-status" class="library-nebula-status">Loading library nebula...</span>
+						</div>
+						<div id="library-nebula-chart" class="library-nebula-chart"></div>
+						<div id="library-nebula-empty" class="library-nebula-empty is-visible">Loading library nebula...</div>
+					</div>
+				</div>
+				<div class="col-md-4">
+					<div class="library-nebula-sidebar">
+						<div class="library-nebula-block">
+							<h4>Clustering Result</h4>
+							<div id="library-nebula-legend" class="library-nebula-legend"></div>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-12" style="margin-top: 18px;">
+					<div class="library-nebula-block">
+						<h4>Paper Detail</h4>
+						<div id="library-nebula-detail" class="library-nebula-detail">
+							<div class="library-nebula-detail-empty">Select a star to inspect the paper title, semantic cluster, source collection, and PDF link.</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
 <div class="container">
 	<!-- ===========================
 	HEADER
@@ -1849,57 +1945,9 @@ FONTS & ICONS
 		</div>
 		<hr class="firsthr">
 
-		<div class="col-md-12">
-			<div class="library-nebula-shell">
-				<div class="library-nebula-header">
-					<div>
-						<h2>Research Library Nebula</h2>
-						<p id="library-nebula-summary">Collapsed by default. Expand to inspect the semantic spread of your collected Vector DB papers.</p>
-					</div>
-					<div class="library-nebula-actions">
-						<button id="library-nebula-refresh" type="button" class="library-nebula-refresh" onclick="loadLibraryNebula(true)" style="display:none;">
-							<i class="fas fa-sync-alt"></i> Refresh Map
-						</button>
-						<button id="library-nebula-toggle" type="button" class="library-nebula-toggle" onclick="toggleLibraryNebulaVisibility()" aria-expanded="false">
-							<i class="fas fa-chevron-down"></i> Expand
-						</button>
-					</div>
-				</div>
-				<div id="library-nebula-content" class="row" hidden>
-					<div class="col-md-8">
-						<div class="library-nebula-stage">
-							<div class="library-nebula-stage-meta">
-								<span id="library-nebula-status" class="library-nebula-status">Loading library nebula...</span>
-							</div>
-							<div id="library-nebula-chart" class="library-nebula-chart"></div>
-							<div id="library-nebula-empty" class="library-nebula-empty is-visible">Loading library nebula...</div>
-						</div>
-					</div>
-					<div class="col-md-4">
-						<div class="library-nebula-sidebar">
-							<div class="library-nebula-block">
-								<h4>Clustering Result</h4>
-								<div id="library-nebula-legend" class="library-nebula-legend"></div>
-							</div>
-						</div>
-					</div>
-					<div class="col-md-12" style="margin-top: 18px;">
-						<div class="library-nebula-block">
-							<h4>Paper Detail</h4>
-							<div id="library-nebula-detail" class="library-nebula-detail">
-								<div class="library-nebula-detail-empty">Select a star to inspect the paper title, semantic cluster, source collection, and PDF link.</div>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-		<hr class="firsthr">
-	
-	
-		<!-- ===========================
-		HEADER
-	============================ -->
+			<!-- ===========================
+			HEADER
+		============================ -->
 <div class="row">
 	<div class="col-md-6">
 		<!-- <h2 align="left"> <span class="fas fa-sitemap"></span>  Workflow of the Demo: </h2> -->
@@ -2621,13 +2669,12 @@ FONTS & ICONS
 			selectedCycleIndex: null
 		};
 
-		const libraryNebulaState = {
-			chart: null,
-			payload: null,
-			resizeBound: false,
-			expanded: false,
-			hasLoaded: false
-		};
+			const libraryNebulaState = {
+				chart: null,
+				payload: null,
+				resizeBound: false,
+				hasLoaded: false
+			};
 
 		function escapeHtml(value) {
 			return String(value || '')
@@ -2896,20 +2943,10 @@ FONTS & ICONS
 			}
 		}
 
-		function toggleLibraryNebulaVisibility() {
-			const content = document.getElementById('library-nebula-content');
-			const toggle = document.getElementById('library-nebula-toggle');
-			const refresh = document.getElementById('library-nebula-refresh');
-			libraryNebulaState.expanded = !libraryNebulaState.expanded;
-
-			content.hidden = !libraryNebulaState.expanded;
-			toggle.setAttribute('aria-expanded', libraryNebulaState.expanded ? 'true' : 'false');
-			toggle.innerHTML = libraryNebulaState.expanded
-				? '<i class="fas fa-chevron-up"></i> Collapse'
-				: '<i class="fas fa-chevron-down"></i> Expand';
-			refresh.style.display = libraryNebulaState.expanded ? 'inline-flex' : 'none';
-
-			if (libraryNebulaState.expanded) {
+			function openLibraryNebulaWorkspace() {
+				document.getElementById('library-nebula-shell').classList.add('is-open');
+				document.getElementById('library-nebula-shell').setAttribute('aria-hidden', 'false');
+				syncWorkspaceOverlayState();
 				if (!libraryNebulaState.hasLoaded) {
 					loadLibraryNebula(false);
 				} else if (libraryNebulaState.chart) {
@@ -2917,16 +2954,23 @@ FONTS & ICONS
 						libraryNebulaState.chart.resize();
 					}, 50);
 				}
-			} else if (libraryNebulaState.payload && libraryNebulaState.payload.stats) {
-				setLibraryNebulaSummary(`Collapsed. ${libraryNebulaState.payload.stats.total_papers} papers are cached in the map.`);
-			} else {
-				setLibraryNebulaSummary('Collapsed by default. Expand to inspect the semantic spread of your collected Vector DB papers.');
 			}
-		}
 
-		function initLibraryNebula() {
-			setLibraryNebulaSummary('Collapsed by default. Expand to inspect the semantic spread of your collected Vector DB papers.');
-		}
+			function closeLibraryNebulaWorkspace() {
+				document.getElementById('library-nebula-shell').classList.remove('is-open');
+				document.getElementById('library-nebula-shell').setAttribute('aria-hidden', 'true');
+				syncWorkspaceOverlayState();
+			}
+
+			function initLibraryNebula() {
+				setLibraryNebulaSummary('Semantic layout of your cached Vector DB papers. Zoom, pan, and inspect cluster structure without affecting the main page.');
+			}
+
+			function syncWorkspaceOverlayState() {
+				const anyOpen = document.getElementById('optiresearch-shell').classList.contains('is-open')
+					|| document.getElementById('library-nebula-shell').classList.contains('is-open');
+				document.body.classList.toggle('optiresearch-open', anyOpen);
+			}
 
 		function switchOptiResearchTab(tabName) {
 			autoResearchState.activeTab = tabName === 'autoresearch' ? 'autoresearch' : 'chat';
@@ -3680,22 +3724,22 @@ FONTS & ICONS
 		}
 	}
 
-	function openOptiResearchWorkspace() {
-		if (!optiResearchState.enabled) {
-			return;
+		function openOptiResearchWorkspace() {
+			if (!optiResearchState.enabled) {
+				return;
+			}
+			document.getElementById('optiresearch-shell').classList.add('is-open');
+			document.getElementById('optiresearch-shell').setAttribute('aria-hidden', 'false');
+			syncWorkspaceOverlayState();
+			updateOptiResearchPdfFrame();
 		}
-		document.getElementById('optiresearch-shell').classList.add('is-open');
-		document.getElementById('optiresearch-shell').setAttribute('aria-hidden', 'false');
-		document.body.classList.add('optiresearch-open');
-		updateOptiResearchPdfFrame();
-	}
 
-	function closeOptiResearchWorkspace() {
-		closeAutoResearchCanvas();
-		document.getElementById('optiresearch-shell').classList.remove('is-open');
-		document.getElementById('optiresearch-shell').setAttribute('aria-hidden', 'true');
-		document.body.classList.remove('optiresearch-open');
-	}
+		function closeOptiResearchWorkspace() {
+			closeAutoResearchCanvas();
+			document.getElementById('optiresearch-shell').classList.remove('is-open');
+			document.getElementById('optiresearch-shell').setAttribute('aria-hidden', 'true');
+			syncWorkspaceOverlayState();
+		}
 
 	async function submitOptiResearchQuestion() {
 		if (!optiResearchState.enabled || !optiResearchState.chatEnabled || !optiResearchState.surveyId) {
@@ -3837,15 +3881,21 @@ FONTS & ICONS
 		document.getElementById('autoresearch-candidate-count').addEventListener('input', syncAutoResearchControls);
 		document.getElementById('autoresearch-max-iterations').addEventListener('input', syncAutoResearchControls);
 
-		document.getElementById('optiresearch-shell').addEventListener('click', function(event) {
-			if (event.target.id === 'optiresearch-shell') {
-				closeOptiResearchWorkspace();
-			}
-		});
+			document.getElementById('optiresearch-shell').addEventListener('click', function(event) {
+				if (event.target.id === 'optiresearch-shell') {
+					closeOptiResearchWorkspace();
+				}
+			});
 
-		document.getElementById('autoresearch-cycle-canvas').addEventListener('click', function(event) {
-			if (event.target.id === 'autoresearch-cycle-canvas') {
-				closeAutoResearchCanvas();
+			document.getElementById('library-nebula-shell').addEventListener('click', function(event) {
+				if (event.target.id === 'library-nebula-shell') {
+					closeLibraryNebulaWorkspace();
+				}
+			});
+
+			document.getElementById('autoresearch-cycle-canvas').addEventListener('click', function(event) {
+				if (event.target.id === 'autoresearch-cycle-canvas') {
+					closeAutoResearchCanvas();
 			}
 		});
 
