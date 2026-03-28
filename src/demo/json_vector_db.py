@@ -45,7 +45,7 @@ class JSONVectorDB:
         self,
         json_folder: str = "src/static/local_pdfs",
         model_name: str = "all-MiniLM-L6-v2",
-        cache_dir: str = "src/static/local_pdfs/.cache"
+        cache_dir: Optional[str] = None
     ):
         """
         初始化向量数据库
@@ -57,7 +57,7 @@ class JSONVectorDB:
         """
         self.json_folder = Path(json_folder)
         self.model_name = model_name
-        self.cache_dir = Path(cache_dir)
+        self.cache_dir = Path(cache_dir) if cache_dir else self.json_folder / ".cache"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
         # 数据存储
@@ -82,6 +82,22 @@ class JSONVectorDB:
         data_cache = self.cache_dir / f"papers_data_{self.model_name.replace('/', '_')}.pkl"
         return index_cache, data_cache
 
+    def _get_json_files(self) -> List[Path]:
+        """Return JSON files in a stable order."""
+        if not self.json_folder.exists():
+            return []
+        return sorted(self.json_folder.glob("*.json"), key=lambda path: path.name.lower())
+
+    def _compute_json_signature(self, json_files: List[Path]) -> str:
+        """Fingerprint the current JSON set so stale caches can be invalidated."""
+        hasher = hashlib.md5()
+        for json_file in json_files:
+            stat = json_file.stat()
+            hasher.update(str(json_file.resolve()).encode("utf-8"))
+            hasher.update(str(stat.st_size).encode("utf-8"))
+            hasher.update(str(stat.st_mtime_ns).encode("utf-8"))
+        return hasher.hexdigest()
+
     def _load_json_files(self) -> Dict[str, dict]:
         """
         加载所有 JSON 文件
@@ -97,7 +113,7 @@ class JSONVectorDB:
             return all_papers
 
         # 查找所有 JSON 文件
-        json_files = list(self.json_folder.glob("*.json"))
+        json_files = self._get_json_files()
         print(f"Found {len(json_files)} JSON files in {self.json_folder}")
 
         for json_file in json_files:
@@ -133,13 +149,17 @@ class JSONVectorDB:
             是否成功构建
         """
         index_cache, data_cache = self._get_cache_paths()
+        json_files = self._get_json_files()
+        json_signature = self._compute_json_signature(json_files)
 
         # 检查缓存是否存在
         if not force_rebuild and index_cache.exists() and data_cache.exists():
             print("Loading cached index...")
             try:
                 self._load_cache(index_cache, data_cache)
-                return True
+                if getattr(self, "json_signature", None) == json_signature:
+                    return True
+                print("JSON files changed since cache build, rebuilding index...")
             except Exception as e:
                 print(f"Cache loading failed: {e}, rebuilding...")
 
@@ -188,6 +208,7 @@ class JSONVectorDB:
         self.index.add(embeddings.astype('float32'))
 
         print(f"Index built successfully. Total papers: {len(self.titles)}")
+        self.json_signature = json_signature
 
         # 保存缓存
         self._save_cache(index_cache, data_cache)
@@ -205,7 +226,8 @@ class JSONVectorDB:
                 "titles": self.titles,
                 "pdf_paths": self.pdf_paths,
                 "json_sources": self.json_sources,
-                "paper_ids": self.paper_ids
+                "paper_ids": self.paper_ids,
+                "json_signature": self._compute_json_signature(self._get_json_files())
             }
             with open(data_path, 'wb') as f:
                 pickle.dump(data, f)
@@ -227,6 +249,7 @@ class JSONVectorDB:
         self.pdf_paths = data["pdf_paths"]
         self.json_sources = data["json_sources"]
         self.paper_ids = data["paper_ids"]
+        self.json_signature = data.get("json_signature")
 
         # 加载 embedding 模型
         self.embedding_model = SentenceTransformer(self.model_name)
@@ -304,7 +327,7 @@ _db_instance: Optional[JSONVectorDB] = None
 def get_db_instance(json_folder: str = "src/static/local_pdfs") -> JSONVectorDB:
     """获取全局数据库实例"""
     global _db_instance
-    if _db_instance is None:
+    if _db_instance is None or _db_instance.json_folder != Path(json_folder):
         _db_instance = JSONVectorDB(json_folder=json_folder)
     return _db_instance
 
