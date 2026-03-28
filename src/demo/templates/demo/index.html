@@ -294,6 +294,12 @@ textarea {
 	margin-bottom: 22px;
 }
 
+.library-nebula-actions {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
 .library-nebula-header h2 {
 	margin: 0;
 	font-size: 30px;
@@ -307,12 +313,21 @@ textarea {
 	line-height: 1.7;
 }
 
+.library-nebula-toggle,
 .library-nebula-refresh {
 	border: 1px solid rgba(125, 211, 252, 0.34);
 	border-radius: 999px;
 	background: rgba(7, 20, 34, 0.55);
 	color: #dff5ff;
 	padding: 8px 16px;
+}
+
+.library-nebula-toggle {
+	min-width: 140px;
+}
+
+.library-nebula-content[hidden] {
+	display: none !important;
 }
 
 .library-nebula-stage,
@@ -1600,11 +1615,17 @@ textarea {
 	  @media (max-width: 1100px) {
 	    .library-nebula-header {
 	      flex-direction: column;
-	    }
+	}
 
 	    .library-nebula-stage,
 	    .library-nebula-sidebar {
 	      min-height: auto;
+	    }
+
+	    .library-nebula-actions {
+	      width: 100%;
+	      justify-content: flex-start;
+	      flex-wrap: wrap;
 	    }
 
 	    .library-nebula-chart {
@@ -1843,13 +1864,18 @@ FONTS & ICONS
 				<div class="library-nebula-header">
 					<div>
 						<h2>Research Library Nebula</h2>
-						<p>A static semantic map of your collected Vector DB papers. Each star is a paper, positioned by title embedding and colored by its source collection JSON.</p>
+						<p id="library-nebula-summary">Collapsed by default. Expand to inspect the semantic spread of your collected Vector DB papers.</p>
 					</div>
-					<button type="button" class="library-nebula-refresh" onclick="loadLibraryNebula(true)">
-						<i class="fas fa-sync-alt"></i> Refresh Map
-					</button>
+					<div class="library-nebula-actions">
+						<button id="library-nebula-refresh" type="button" class="library-nebula-refresh" onclick="loadLibraryNebula(true)" style="display:none;">
+							<i class="fas fa-sync-alt"></i> Refresh Map
+						</button>
+						<button id="library-nebula-toggle" type="button" class="library-nebula-toggle" onclick="toggleLibraryNebulaVisibility()" aria-expanded="false">
+							<i class="fas fa-chevron-down"></i> Expand
+						</button>
+					</div>
 				</div>
-				<div class="row">
+				<div id="library-nebula-content" class="row" hidden>
 					<div class="col-md-8">
 						<div class="library-nebula-stage">
 							<div class="library-nebula-stage-meta">
@@ -2624,7 +2650,9 @@ FONTS & ICONS
 		const libraryNebulaState = {
 			chart: null,
 			payload: null,
-			resizeBound: false
+			resizeBound: false,
+			expanded: false,
+			hasLoaded: false
 		};
 
 		function escapeHtml(value) {
@@ -2640,6 +2668,10 @@ FONTS & ICONS
 			const status = document.getElementById('library-nebula-status');
 			status.textContent = message;
 			status.classList.toggle('is-error', Boolean(isError));
+		}
+
+		function setLibraryNebulaSummary(message) {
+			document.getElementById('library-nebula-summary').textContent = message;
 		}
 
 		function setLibraryNebulaEmpty(message, visible) {
@@ -2698,8 +2730,23 @@ FONTS & ICONS
 			`;
 		}
 
+		function getLibraryNebulaPointSize(totalPapers) {
+			if (totalPapers >= 2500) {
+				return 4;
+			}
+			if (totalPapers >= 1500) {
+				return 5;
+			}
+			if (totalPapers >= 800) {
+				return 6;
+			}
+			return 7;
+		}
+
 		function buildLibraryNebulaSeries(payload) {
 			const grouped = {};
+			const totalPapers = payload && payload.stats ? payload.stats.total_papers || 0 : 0;
+			const pointSize = getLibraryNebulaPointSize(totalPapers);
 			(payload.points || []).forEach(point => {
 				if (!grouped[point.source]) {
 					grouped[point.source] = [];
@@ -2707,7 +2754,7 @@ FONTS & ICONS
 				grouped[point.source].push({
 					...point,
 					value: [point.x, point.y],
-					symbolSize: point.symbol_size || 10
+					symbolSize: pointSize
 				});
 			});
 
@@ -2715,18 +2762,17 @@ FONTS & ICONS
 				name: source.name,
 				type: 'scatter',
 				data: grouped[source.name] || [],
-				blendMode: 'lighter',
 				itemStyle: {
 					color: source.color,
-					opacity: 0.84,
-					shadowBlur: 18,
-					shadowColor: source.color
+					opacity: 0.46,
+					shadowBlur: 0
 				},
 				emphasis: {
-					scale: 1.5,
+					scale: 1.25,
 					itemStyle: {
 						borderColor: '#ffffff',
-						borderWidth: 1.2
+						borderWidth: 0.8,
+						opacity: 0.88
 					}
 				}
 			}));
@@ -2799,11 +2845,13 @@ FONTS & ICONS
 			if (typeof echarts === 'undefined') {
 				setLibraryNebulaStatus('ECharts failed to load.', true);
 				setLibraryNebulaEmpty('ECharts failed to load.', true);
+				setLibraryNebulaSummary('ECharts failed to load.');
 				return;
 			}
 
 			setLibraryNebulaStatus('Loading library nebula...', false);
 			setLibraryNebulaEmpty('Loading library nebula...', true);
+			setLibraryNebulaSummary('Loading your library map...');
 			renderLibraryNebulaDetail(null);
 
 			try {
@@ -2816,12 +2864,14 @@ FONTS & ICONS
 				}
 
 				libraryNebulaState.payload = payload;
+				libraryNebulaState.hasLoaded = true;
 				updateLibraryNebulaStats(payload);
 				renderLibraryNebulaLegend(payload);
 
 				if (!Array.isArray(payload.points) || payload.points.length === 0) {
 					setLibraryNebulaStatus(payload.message || 'No library papers available.', false);
 					setLibraryNebulaEmpty(payload.message || 'No library papers available.', true);
+					setLibraryNebulaSummary(payload.message || 'No library papers available.');
 					if (libraryNebulaState.chart) {
 						libraryNebulaState.chart.clear();
 					}
@@ -2830,6 +2880,7 @@ FONTS & ICONS
 
 				renderLibraryNebulaChart(payload);
 				setLibraryNebulaStatus(`Loaded ${payload.stats.total_papers} papers across ${payload.stats.total_sources} collections.`, false);
+				setLibraryNebulaSummary(`Loaded ${payload.stats.total_papers} papers across ${payload.stats.total_sources} collections. Click any point to inspect it.`);
 				setLibraryNebulaEmpty('', false);
 				renderLibraryNebulaDetail(payload.points[0]);
 			} catch (error) {
@@ -2838,11 +2889,40 @@ FONTS & ICONS
 				renderLibraryNebulaLegend({ sources: [] });
 				setLibraryNebulaStatus(error.message || 'Failed to load library nebula.', true);
 				setLibraryNebulaEmpty(error.message || 'Failed to load library nebula.', true);
+				setLibraryNebulaSummary(error.message || 'Failed to load library nebula.');
+			}
+		}
+
+		function toggleLibraryNebulaVisibility() {
+			const content = document.getElementById('library-nebula-content');
+			const toggle = document.getElementById('library-nebula-toggle');
+			const refresh = document.getElementById('library-nebula-refresh');
+			libraryNebulaState.expanded = !libraryNebulaState.expanded;
+
+			content.hidden = !libraryNebulaState.expanded;
+			toggle.setAttribute('aria-expanded', libraryNebulaState.expanded ? 'true' : 'false');
+			toggle.innerHTML = libraryNebulaState.expanded
+				? '<i class="fas fa-chevron-up"></i> Collapse'
+				: '<i class="fas fa-chevron-down"></i> Expand';
+			refresh.style.display = libraryNebulaState.expanded ? 'inline-flex' : 'none';
+
+			if (libraryNebulaState.expanded) {
+				if (!libraryNebulaState.hasLoaded) {
+					loadLibraryNebula(false);
+				} else if (libraryNebulaState.chart) {
+					setTimeout(function() {
+						libraryNebulaState.chart.resize();
+					}, 50);
+				}
+			} else if (libraryNebulaState.payload && libraryNebulaState.payload.stats) {
+				setLibraryNebulaSummary(`Collapsed. ${libraryNebulaState.payload.stats.total_papers} papers are cached in the map.`);
+			} else {
+				setLibraryNebulaSummary('Collapsed by default. Expand to inspect the semantic spread of your collected Vector DB papers.');
 			}
 		}
 
 		function initLibraryNebula() {
-			loadLibraryNebula(false);
+			setLibraryNebulaSummary('Collapsed by default. Expand to inspect the semantic spread of your collected Vector DB papers.');
 		}
 
 		function switchOptiResearchTab(tabName) {
