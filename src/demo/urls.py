@@ -8,6 +8,7 @@ urlpatterns = [
     path('generate_arxiv_query/', views.generate_arxiv_query, name='generate_arxiv_query'),
     path('get_survey_id/', views.get_survey_id, name='get_survey_id'),
     path('get_surveys/', views.get_surveys, name='get_surveys'),
+    path('get_library_nebula/', views.get_library_nebula, name='get_library_nebula'),
     path('get_optiresearch_state/', views.get_optiresearch_state, name='get_optiresearch_state'),
     path('ask_optiresearch/', views.ask_optiresearch, name='ask_optiresearch'),
     path('run_autoresearch/', views.run_autoresearch, name='run_autoresearch'),

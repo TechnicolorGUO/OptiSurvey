@@ -33,6 +33,7 @@ STYLESHEETS
 =========================== -->
 <script src="https://kit.fontawesome.com/a3d039cc94.js" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/turndown/7.1.1/turndown.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 <!-- 引入 TinyMCE -->
 <script src="https://cdn.tiny.cloud/1/hydxooqdtqqbdmmpz8vzrwogprrvx1q5ctume0t9f2m5bvx2/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
 <link rel="stylesheet" href="{% static 'css/fontawesome-free-5.13.0-web/css/fontawesome.min.css' %}">
@@ -271,6 +272,230 @@ textarea {
 
 .recommendation-item a:hover {
 	text-decoration: underline;
+}
+
+.library-nebula-shell {
+	margin: 8px 0 36px;
+	padding: 28px;
+	border-radius: 30px;
+	background:
+		radial-gradient(circle at top left, rgba(56, 189, 248, 0.22), transparent 28%),
+		radial-gradient(circle at top right, rgba(244, 114, 182, 0.14), transparent 24%),
+		linear-gradient(145deg, #06121f 0%, #0b1d31 52%, #132a41 100%);
+	box-shadow: 0 30px 80px rgba(6, 18, 31, 0.24);
+	color: #e5f0ff;
+}
+
+.library-nebula-header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 20px;
+	margin-bottom: 22px;
+}
+
+.library-nebula-header h2 {
+	margin: 0;
+	font-size: 30px;
+	color: #f8fbff;
+}
+
+.library-nebula-header p {
+	margin: 8px 0 0;
+	max-width: 760px;
+	color: rgba(229, 240, 255, 0.78);
+	line-height: 1.7;
+}
+
+.library-nebula-refresh {
+	border: 1px solid rgba(125, 211, 252, 0.34);
+	border-radius: 999px;
+	background: rgba(7, 20, 34, 0.55);
+	color: #dff5ff;
+	padding: 8px 16px;
+}
+
+.library-nebula-stage,
+.library-nebula-sidebar {
+	border-radius: 24px;
+	border: 1px solid rgba(148, 163, 184, 0.14);
+	background: rgba(8, 18, 30, 0.62);
+	backdrop-filter: blur(10px);
+}
+
+.library-nebula-stage {
+	padding: 18px;
+	position: relative;
+	min-height: 560px;
+}
+
+.library-nebula-stage-meta {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 14px;
+	margin-bottom: 10px;
+}
+
+.library-nebula-status {
+	color: rgba(224, 242, 254, 0.8);
+	font-size: 13px;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.library-nebula-status.is-error {
+	color: #fecaca;
+}
+
+.library-nebula-chart {
+	width: 100%;
+	height: 500px;
+}
+
+.library-nebula-empty {
+	position: absolute;
+	inset: 58px 18px 18px;
+	display: none;
+	align-items: center;
+	justify-content: center;
+	border-radius: 18px;
+	border: 1px dashed rgba(125, 211, 252, 0.22);
+	background: rgba(4, 11, 20, 0.55);
+	color: rgba(224, 242, 254, 0.78);
+	text-align: center;
+	padding: 20px;
+}
+
+.library-nebula-empty.is-visible {
+	display: flex;
+}
+
+.library-nebula-sidebar {
+	padding: 20px;
+	min-height: 560px;
+	display: flex;
+	flex-direction: column;
+	gap: 18px;
+}
+
+.library-nebula-stat-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 12px;
+}
+
+.library-nebula-stat {
+	padding: 14px 16px;
+	border-radius: 18px;
+	background: linear-gradient(180deg, rgba(14, 31, 50, 0.98) 0%, rgba(8, 20, 34, 0.98) 100%);
+	border: 1px solid rgba(125, 211, 252, 0.12);
+}
+
+.library-nebula-stat strong {
+	display: block;
+	font-size: 28px;
+	color: #f8fbff;
+}
+
+.library-nebula-stat span {
+	display: block;
+	margin-top: 4px;
+	font-size: 12px;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: rgba(224, 242, 254, 0.62);
+}
+
+.library-nebula-block {
+	padding: 18px;
+	border-radius: 20px;
+	background: rgba(5, 13, 22, 0.5);
+	border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.library-nebula-block h4 {
+	margin: 0 0 12px;
+	color: #f8fbff;
+	font-size: 16px;
+}
+
+.library-nebula-legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.library-nebula-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 7px 12px;
+	border-radius: 999px;
+	background: rgba(9, 23, 37, 0.92);
+	color: rgba(232, 244, 255, 0.84);
+	font-size: 12px;
+}
+
+.library-nebula-chip-dot {
+	width: 10px;
+	height: 10px;
+	border-radius: 999px;
+	flex-shrink: 0;
+}
+
+.library-nebula-detail {
+	display: grid;
+	gap: 12px;
+	color: rgba(224, 242, 254, 0.82);
+	line-height: 1.6;
+}
+
+.library-nebula-detail-title {
+	margin: 0;
+	font-size: 22px;
+	line-height: 1.35;
+	color: #f8fbff;
+}
+
+.library-nebula-detail-meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+.library-nebula-pill {
+	display: inline-flex;
+	align-items: center;
+	padding: 6px 10px;
+	border-radius: 999px;
+	background: rgba(10, 26, 41, 0.92);
+	color: #d6efff;
+	font-size: 12px;
+}
+
+.library-nebula-detail-path {
+	font-size: 13px;
+	color: rgba(192, 214, 233, 0.74);
+	word-break: break-all;
+}
+
+.library-nebula-link {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: fit-content;
+	padding: 10px 14px;
+	border-radius: 999px;
+	background: linear-gradient(135deg, #38bdf8 0%, #22d3ee 100%);
+	color: #04111d;
+	font-weight: 700;
+	text-decoration: none;
+}
+
+.library-nebula-link:hover {
+	color: #04111d;
+	text-decoration: none;
 }
 
 .switch {
@@ -1372,12 +1597,29 @@ textarea {
     overflow: hidden;
   }
 
-  @media (max-width: 1100px) {
-    .optiresearch-panel {
-      inset: 12px;
-      grid-template-columns: 1fr;
-      grid-template-rows: minmax(320px, 1fr) minmax(320px, 0.95fr);
-    }
+	  @media (max-width: 1100px) {
+	    .library-nebula-header {
+	      flex-direction: column;
+	    }
+
+	    .library-nebula-stage,
+	    .library-nebula-sidebar {
+	      min-height: auto;
+	    }
+
+	    .library-nebula-chart {
+	      height: 420px;
+	    }
+
+	    .library-nebula-stat-grid {
+	      grid-template-columns: 1fr 1fr;
+	    }
+
+	    .optiresearch-panel {
+	      inset: 12px;
+	      grid-template-columns: 1fr;
+	      grid-template-rows: minmax(320px, 1fr) minmax(320px, 0.95fr);
+	    }
 
     .optiresearch-pdf-frame,
     .optiresearch-empty {
@@ -1593,12 +1835,70 @@ FONTS & ICONS
 		<!-- <h2 align="right"> --- Automatic Survey Paper Generation</h2> -->
 		<br>
 		<br>
-	</div>
-	<hr class="firsthr">
+		</div>
+		<hr class="firsthr">
 
-
-	<!-- ===========================
-	HEADER
+		<div class="col-md-12">
+			<div class="library-nebula-shell">
+				<div class="library-nebula-header">
+					<div>
+						<h2>Research Library Nebula</h2>
+						<p>A static semantic map of your collected Vector DB papers. Each star is a paper, positioned by title embedding and colored by its source collection JSON.</p>
+					</div>
+					<button type="button" class="library-nebula-refresh" onclick="loadLibraryNebula(true)">
+						<i class="fas fa-sync-alt"></i> Refresh Map
+					</button>
+				</div>
+				<div class="row">
+					<div class="col-md-8">
+						<div class="library-nebula-stage">
+							<div class="library-nebula-stage-meta">
+								<span id="library-nebula-status" class="library-nebula-status">Loading library nebula...</span>
+							</div>
+							<div id="library-nebula-chart" class="library-nebula-chart"></div>
+							<div id="library-nebula-empty" class="library-nebula-empty is-visible">Loading library nebula...</div>
+						</div>
+					</div>
+					<div class="col-md-4">
+						<div class="library-nebula-sidebar">
+							<div class="library-nebula-stat-grid">
+								<div class="library-nebula-stat">
+									<strong id="library-nebula-total-papers">0</strong>
+									<span>Papers</span>
+								</div>
+								<div class="library-nebula-stat">
+									<strong id="library-nebula-total-sources">0</strong>
+									<span>Collections</span>
+								</div>
+								<div class="library-nebula-stat">
+									<strong id="library-nebula-layout-mode">-</strong>
+									<span>Layout</span>
+								</div>
+								<div class="library-nebula-stat">
+									<strong id="library-nebula-embedding-model">-</strong>
+									<span>Embedding</span>
+								</div>
+							</div>
+							<div class="library-nebula-block">
+								<h4>Collections</h4>
+								<div id="library-nebula-legend" class="library-nebula-legend"></div>
+							</div>
+							<div class="library-nebula-block">
+								<h4>Paper Detail</h4>
+								<div id="library-nebula-detail" class="library-nebula-detail">
+									<div>Select a star to inspect the paper title, source collection, and PDF link.</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<hr class="firsthr">
+	
+	
+		<!-- ===========================
+		HEADER
 	============================ -->
 <div class="row">
 	<div class="col-md-6">
@@ -2311,27 +2611,242 @@ FONTS & ICONS
 		pdfUrl: ''
 	};
 
-	const autoResearchState = {
-		activeTab: 'chat',
-		running: false,
-		lastResult: null,
-		cycleHistory: [],
-		mode: 'auto',
-		currentOperationId: null,
-		selectedCycleIndex: null
-	};
+		const autoResearchState = {
+			activeTab: 'chat',
+			running: false,
+			lastResult: null,
+			cycleHistory: [],
+			mode: 'auto',
+			currentOperationId: null,
+			selectedCycleIndex: null
+		};
 
-	function escapeHtml(value) {
-		return String(value || '')
-			.replace(/&/g, '&amp;')
-			.replace(/</g, '&lt;')
-			.replace(/>/g, '&gt;')
-			.replace(/"/g, '&quot;')
-			.replace(/'/g, '&#39;');
-	}
+		const libraryNebulaState = {
+			chart: null,
+			payload: null,
+			resizeBound: false
+		};
 
-	function switchOptiResearchTab(tabName) {
-		autoResearchState.activeTab = tabName === 'autoresearch' ? 'autoresearch' : 'chat';
+		function escapeHtml(value) {
+			return String(value || '')
+				.replace(/&/g, '&amp;')
+				.replace(/</g, '&lt;')
+				.replace(/>/g, '&gt;')
+				.replace(/"/g, '&quot;')
+				.replace(/'/g, '&#39;');
+		}
+
+		function setLibraryNebulaStatus(message, isError) {
+			const status = document.getElementById('library-nebula-status');
+			status.textContent = message;
+			status.classList.toggle('is-error', Boolean(isError));
+		}
+
+		function setLibraryNebulaEmpty(message, visible) {
+			const empty = document.getElementById('library-nebula-empty');
+			empty.textContent = message;
+			empty.classList.toggle('is-visible', Boolean(visible));
+		}
+
+		function updateLibraryNebulaStats(payload) {
+			const stats = payload && payload.stats ? payload.stats : {};
+			document.getElementById('library-nebula-total-papers').textContent = stats.total_papers || 0;
+			document.getElementById('library-nebula-total-sources').textContent = stats.total_sources || 0;
+			document.getElementById('library-nebula-layout-mode').textContent = (stats.layout || '-').replace(/title-embedding-2d/, '2D');
+			document.getElementById('library-nebula-embedding-model').textContent = stats.embedding_model || '-';
+		}
+
+		function renderLibraryNebulaLegend(payload) {
+			const legend = document.getElementById('library-nebula-legend');
+			const sources = Array.isArray(payload.sources) ? payload.sources : [];
+			if (!sources.length) {
+				legend.innerHTML = '<span class="library-nebula-chip">No collections loaded</span>';
+				return;
+			}
+
+			legend.innerHTML = sources.slice(0, 12).map(source => `
+				<span class="library-nebula-chip">
+					<span class="library-nebula-chip-dot" style="background:${escapeHtml(source.color)};"></span>
+					${escapeHtml(source.name)} (${escapeHtml(source.count)})
+				</span>
+			`).join('');
+
+			if (sources.length > 12) {
+				legend.innerHTML += `<span class="library-nebula-chip">+${sources.length - 12} more</span>`;
+			}
+		}
+
+		function renderLibraryNebulaDetail(point) {
+			const detail = document.getElementById('library-nebula-detail');
+			if (!point) {
+				detail.innerHTML = '<div>Select a star to inspect the paper title, source collection, and PDF link.</div>';
+				return;
+			}
+
+			const pdfLink = point.pdf_url
+				? `<a class="library-nebula-link" href="${escapeHtml(point.pdf_url)}" target="_blank" rel="noopener noreferrer">Open PDF</a>`
+				: '<div class="library-nebula-pill">PDF path not web-accessible</div>';
+
+			detail.innerHTML = `
+				<h3 class="library-nebula-detail-title">${escapeHtml(point.display_title || point.title)}</h3>
+				<div class="library-nebula-detail-meta">
+					<span class="library-nebula-pill">Collection: ${escapeHtml(point.source)}</span>
+					<span class="library-nebula-pill">ID: ${escapeHtml(point.id)}</span>
+				</div>
+				<div class="library-nebula-detail-path">${escapeHtml(point.pdf_path || '')}</div>
+				${pdfLink}
+			`;
+		}
+
+		function buildLibraryNebulaSeries(payload) {
+			const grouped = {};
+			(payload.points || []).forEach(point => {
+				if (!grouped[point.source]) {
+					grouped[point.source] = [];
+				}
+				grouped[point.source].push({
+					...point,
+					value: [point.x, point.y],
+					symbolSize: point.symbol_size || 10
+				});
+			});
+
+			return (payload.sources || []).map(source => ({
+				name: source.name,
+				type: 'scatter',
+				data: grouped[source.name] || [],
+				blendMode: 'lighter',
+				itemStyle: {
+					color: source.color,
+					opacity: 0.84,
+					shadowBlur: 18,
+					shadowColor: source.color
+				},
+				emphasis: {
+					scale: 1.5,
+					itemStyle: {
+						borderColor: '#ffffff',
+						borderWidth: 1.2
+					}
+				}
+			}));
+		}
+
+		function renderLibraryNebulaChart(payload) {
+			const chartElement = document.getElementById('library-nebula-chart');
+			if (!libraryNebulaState.chart) {
+				libraryNebulaState.chart = echarts.init(chartElement, null, { renderer: 'canvas' });
+			}
+
+			const series = buildLibraryNebulaSeries(payload);
+			libraryNebulaState.chart.setOption({
+				animationDuration: 900,
+				animationEasing: 'quarticOut',
+				backgroundColor: 'transparent',
+				grid: {
+					top: 10,
+					right: 10,
+					bottom: 10,
+					left: 10
+				},
+				tooltip: {
+					trigger: 'item',
+					backgroundColor: 'rgba(6, 18, 31, 0.94)',
+					borderColor: 'rgba(125, 211, 252, 0.35)',
+					borderWidth: 1,
+					textStyle: {
+						color: '#e0f2fe'
+					},
+					formatter: function(params) {
+						const point = params.data || {};
+						return `
+							<div style="max-width:320px;">
+								<strong>${escapeHtml(point.display_title || point.title || '')}</strong><br>
+								<span>${escapeHtml(point.source || '')}</span>
+							</div>
+						`;
+					}
+				},
+				xAxis: {
+					type: 'value',
+					show: false,
+					scale: true
+				},
+				yAxis: {
+					type: 'value',
+					show: false,
+					scale: true
+				},
+				series: series
+			}, true);
+
+			libraryNebulaState.chart.off('click');
+			libraryNebulaState.chart.on('click', function(params) {
+				renderLibraryNebulaDetail(params.data || null);
+			});
+
+			if (!libraryNebulaState.resizeBound) {
+				window.addEventListener('resize', function() {
+					if (libraryNebulaState.chart) {
+						libraryNebulaState.chart.resize();
+					}
+				});
+				libraryNebulaState.resizeBound = true;
+			}
+		}
+
+		async function loadLibraryNebula(forceRefresh) {
+			if (typeof echarts === 'undefined') {
+				setLibraryNebulaStatus('ECharts failed to load.', true);
+				setLibraryNebulaEmpty('ECharts failed to load.', true);
+				return;
+			}
+
+			setLibraryNebulaStatus('Loading library nebula...', false);
+			setLibraryNebulaEmpty('Loading library nebula...', true);
+			renderLibraryNebulaDetail(null);
+
+			try {
+				const suffix = forceRefresh ? '?refresh=1' : '';
+				const response = await fetch(`/get_library_nebula/${suffix}`);
+				const payload = await response.json();
+
+				if (!response.ok || payload.status === 'error') {
+					throw new Error(payload.error || payload.message || 'Unable to load library nebula.');
+				}
+
+				libraryNebulaState.payload = payload;
+				updateLibraryNebulaStats(payload);
+				renderLibraryNebulaLegend(payload);
+
+				if (!Array.isArray(payload.points) || payload.points.length === 0) {
+					setLibraryNebulaStatus(payload.message || 'No library papers available.', false);
+					setLibraryNebulaEmpty(payload.message || 'No library papers available.', true);
+					if (libraryNebulaState.chart) {
+						libraryNebulaState.chart.clear();
+					}
+					return;
+				}
+
+				renderLibraryNebulaChart(payload);
+				setLibraryNebulaStatus(`Loaded ${payload.stats.total_papers} papers across ${payload.stats.total_sources} collections.`, false);
+				setLibraryNebulaEmpty('', false);
+				renderLibraryNebulaDetail(payload.points[0]);
+			} catch (error) {
+				console.error(error);
+				updateLibraryNebulaStats({ stats: {} });
+				renderLibraryNebulaLegend({ sources: [] });
+				setLibraryNebulaStatus(error.message || 'Failed to load library nebula.', true);
+				setLibraryNebulaEmpty(error.message || 'Failed to load library nebula.', true);
+			}
+		}
+
+		function initLibraryNebula() {
+			loadLibraryNebula(false);
+		}
+
+		function switchOptiResearchTab(tabName) {
+			autoResearchState.activeTab = tabName === 'autoresearch' ? 'autoresearch' : 'chat';
 		const tabs = ['chat', 'autoresearch'];
 		tabs.forEach(tab => {
 			const button = document.getElementById(`optiresearch-tab-button-${tab}`);
@@ -3222,10 +3737,11 @@ FONTS & ICONS
 		runAutoResearchCycleSequence();
 	}
 
-	document.addEventListener('DOMContentLoaded', function() {
-		switchOptiResearchTab('chat');
-		syncAutoResearchControls();
-		clearAutoResearchResults();
+		document.addEventListener('DOMContentLoaded', function() {
+			initLibraryNebula();
+			switchOptiResearchTab('chat');
+			syncAutoResearchControls();
+			clearAutoResearchResults();
 
 		document.getElementById('optiresearch-question').addEventListener('keydown', function(event) {
 			if (event.key === 'Enter' && !event.shiftKey) {

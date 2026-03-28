@@ -52,6 +52,7 @@ from .asg_add_flowchart import insert_ref_images, detect_flowcharts
 from .asg_mindmap import generate_graphviz_png, insert_outline_image
 from .asg_latex import tex_to_pdf, insert_figures, md_to_tex, preprocess_md
 from .local_pdf_db import search_local_pdfs, scan_local_pdf_database, get_local_pdf_path, set_local_db_path
+from .library_nebula import get_library_nebula_payload
 # from .survey_generator_api import ensure_all_papers_cited
 import glob
 
@@ -542,6 +543,23 @@ def get_surveys(request):
 
     surveys = get_existing_survey_ids()
     return JsonResponse({'surveys': surveys})
+
+
+def get_library_nebula(request):
+    force_rebuild = str(request.GET.get('refresh', '')).lower() in {'1', 'true', 'yes'}
+    try:
+        payload = get_library_nebula_payload(force_rebuild=force_rebuild)
+        return JsonResponse(payload, json_dumps_params={'ensure_ascii': False})
+    except Exception as e:
+        return JsonResponse(
+            {
+                'status': 'error',
+                'error': str(e),
+                'message': 'Failed to build library nebula payload.'
+            },
+            status=500,
+            json_dumps_params={'ensure_ascii': False}
+        )
 
 def _strip_thinking_blocks(text):
     if not text:
