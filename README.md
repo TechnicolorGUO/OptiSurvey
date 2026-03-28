@@ -2,215 +2,275 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://github.com/TechnicolorGUO/OptiSurvey/blob/main/resources/logo1.png">
     <source media="(prefers-color-scheme: light)" srcset="https://github.com/TechnicolorGUO/OptiSurvey/blob/main/resources/logo1.png">
-    <img src="https://github.com/TechnicolorGUO/OptiSurvey/blob/main/resources/logo1.png" alt="Logo" width="50%" height="50%">
+    <img src="https://github.com/TechnicolorGUO/OptiSurvey/blob/main/resources/logo1.png" alt="OptiSurvey logo" width="50%" height="50%">
   </picture>
 </p>
 
-<p align="center"><b>OptiSurvey</b>: The First AI-Powered Literature Survey System Tailored for Optical Communication Research</p>
+<p align="center"><b>OptiSurvey</b>: AI-assisted literature survey generation for optical communication research</p>
 <p align="center">
   <img alt="python" src="https://img.shields.io/badge/python-3.10-blue">
-  <img alt="Static Badge" src="https://img.shields.io/badge/license-apache-green">
+  <img alt="license" src="https://img.shields.io/badge/license-apache-green">
   <img alt="domain" src="https://img.shields.io/badge/domain-optical%20communication-orange">
 </p>
-<div align="center">
-<hr>
-
-[Quick Start](#quick-start) | [Use Docker(Recommended)](#use-docker)
-
-</div>
 
 ---
 
-## Introduction
+## Overview
 
-**OptiSurvey** is a specialized **AI-powered literature survey generation system** designed exclusively for **optical communication research**. As optical communication technologies rapidly evolve—spanning fiber optics, free-space optical communications, silicon photonics, coherent detection, quantum communication, and next-generation networking—researchers face the challenge of keeping pace with an exponentially growing body of literature.
+OptiSurvey is a domain-focused literature survey system for optical communication research. It helps researchers collect papers, parse PDFs, cluster content, draft survey sections, and export the final survey as PDF or LaTeX PDF.
 
-OptiSurvey addresses this challenge by leveraging cutting-edge **Large Language Models (LLMs)** and **Natural Language Processing (NLP)** techniques to provide optical communication researchers with an **intelligent**, **interactive**, and **personalized** tool for conducting comprehensive literature reviews.
+The web app now includes two post-generation workflows:
 
-### 🌟 Why OptiSurvey for Optical Communication?
+- `OptiResearch`: a reader + grounded Q&A workspace for the generated survey.
+- `OptiResearch cycles`: a multi-cycle research ideation workflow that turns the generated survey into brainstormed ideas, structured hypotheses, and ranked final candidates.
 
-- **🔬 Domain-Specific Intelligence**: Purpose-built to understand optical communication terminology, concepts, and research paradigms, including modulation formats, channel modeling, signal processing, photonic devices, and network architectures.
-- **🎯 Specialized Paper Analysis**: Intelligently extracts and organizes key information relevant to optical communication, such as transmission rates, wavelength ranges, BER performance, system configurations, and experimental setups.
-- **📊 Research Trend Identification**: Automatically identifies emerging trends in optical communication research, from WDM systems to space-division multiplexing, AI-enabled optical networks, and beyond.
+This repository is built around optical communication use cases such as coherent systems, fiber optics, optical networks, silicon photonics, free-space optics, and related signal-processing pipelines.
 
-### 🔥 Key Features:
+## Main Features
 
-- **📝 Automatic Literature Survey Generation**: Extract key insights from optical communication papers and generate well-structured, publication-ready literature surveys.
-- **💡 Interactive Exploration**: Dynamically filter, refine, and customize your survey in real-time based on specific topics (e.g., coherent detection, ROADM, or optical amplifiers).
-- **🔍 Intelligent Clustering**: Automatically categorize papers by research methods, technologies, or application domains specific to optical communication.
-- **📄 Professional PDF Export**: Generate high-quality literature surveys in PDF format with either **Markdown** or **LaTeX**, formatted to academic standards.
-- **⚡ Multimodality Support**: Extract and analyze figures, diagrams, and experimental setup illustrations from optical communication papers.
-- **🐳 Docker Support**: Quickly deploy and run the application in a containerized environment for seamless collaboration.  
+- Upload local PDFs or bring in recommended references.
+- Parse and structure optical communication papers.
+- Generate a survey draft from the uploaded paper set.
+- Export the survey as a regular PDF or a LaTeX-based PDF.
+- Open the generated survey in `OptiResearch` for reader-side inspection.
+- Ask grounded questions against the generated survey text in `OptiResearch`.
+- Run `OptiResearch` cycles on top of the current survey.
+- Export the final selected hypotheses from the latest OptiResearch cycle as Markdown.
 
+## Project Layout
 
-![flochart](/resources/flowchart.png)
-
----
-
-## 🔭 Application Scenarios in Optical Communication
-
-**OptiSurvey** is specifically designed to support optical communication researchers across various domains:
-
-### Research Areas Covered:
-- **📡 Fiber Optic Communication**: High-speed transmission systems, optical amplifiers (EDFA, Raman, SOA), dispersion compensation
-- **🌐 Optical Networks**: ROADM, WDM/DWDM systems, software-defined optical networks (SDON), elastic optical networks
-- **💫 Free-Space Optical Communications**: FSO systems, atmospheric turbulence mitigation, hybrid RF/FSO networks
-- **🔬 Silicon Photonics**: Photonic integrated circuits, on-chip optical interconnects, modulators and detectors
-- **🎯 Advanced Modulation & Detection**: Coherent detection, QAM, OFDM, probabilistic shaping, DSP algorithms
-- **🔐 Quantum Communication**: QKD systems, quantum networks, entanglement distribution
-- **📶 Next-Gen Technologies**: Space-division multiplexing, orbital angular momentum (OAM), AI-enabled optical networks
-
-### Use Cases:
-✅ **PhD Students**: Quickly review state-of-the-art before starting research  
-✅ **Researchers**: Stay updated with latest advances in specific optical communication topics  
-✅ **Lab Groups**: Organize and synthesize team's collected papers into coherent surveys  
-✅ **Grant Writers**: Generate comprehensive background sections for research proposals  
-✅ **Course Instructors**: Create up-to-date teaching materials on optical communication topics
-
-<hr>
-
-## Examples
-
-See how **OptiSurvey** automatically generates comprehensive literature surveys for optical communication research. The system intelligently organizes papers, extracts key technical details, and produces publication-ready documents.
-
-### Markdown Example
-https://github.com/user-attachments/assets/fdf48927-ae0f-4040-9595-4a509ea62f08
-
-### LaTeX Example
-
-
-https://github.com/user-attachments/assets/db2b08f5-a328-43e1-9ae9-41c09b54214b
-
-
-<hr>
+- `src/demo/templates/demo/index.html`: main frontend UI.
+- `src/demo/views.py`: backend endpoints for upload, survey generation, PDF export, and OptiResearch workflows.
+- `src/static/data/results/`: generated PDFs.
+- `src/static/data/txt/`: generated survey text artifacts.
+- `src/static/data/info/`: processed survey markdown artifacts.
 
 ## Quick Start
 
-OptiSurvey requires Python 3.10. A minimum 20G disk space is required for the system and models.
+OptiSurvey requires Python `3.10`. Plan for at least `20 GB` of free disk space for dependencies, parsed files, and models.
 
-### 1️⃣ Clone the Repository  
-Clone the repository to your local machine:  
-```sh
+### 1. Clone the repository
+
+```bash
 git clone https://github.com/TechnicolorGUO/OptiSurvey
 cd OptiSurvey
 ```
 
-### 2️⃣ Set Up the Environment
-Create a virtual environment and activate it:
-```sh
+### 2. Create the environment
+
+```bash
 conda create -n optisurvey python=3.10
 conda activate optisurvey
-```
-Install the required dependencies:
-```sh
 python scripts/setup_env.py
 ```
 
-For the `ConnectTimeout` error when downloading Huggingface models, please run the following script:
+If you hit model download timeout issues, use the fallback flow below:
+
 ```bash
 pip install modelscope
 wget https://gcore.jsdelivr.net/gh/opendatalab/MinerU@master/scripts/download_models.py -O download_models.py
 python download_models.py
 ```
 
-### 3️⃣ Configure Environment Variables
-Create a  `.env` file in the root directory of the project and add the following configurations:
+### 3. Configure environment variables
+
+Create a `.env` file in the repository root:
+
 ```env
 OPENAI_API_KEY=<your_openai_api_key_here>
 OPENAI_API_BASE=<your_openai_api_base_here>
-MODEL=<your_preferred_model_here>
+MODEL=<your_generation_model_here>
+EVALUATE_MODEL=<your_evaluation_model_here>
+VLM_MODEL=<your_vlm_model_here>
 ```
-Replace the placeholders with your actual OpenAI API key, API base URL, and preferred model.
 
-To test the system on GPU, you also need to follow the instructions provided by [MinerU](https://github.com/opendatalab/MinerU/tree/master):
-- [Ubuntu 22.04 LTS + GPU](https://github.com/opendatalab/MinerU/blob/master/docs/README_Ubuntu_CUDA_Acceleration_en_US.md)
-- [Windows 10/11 + GPU](https://github.com/opendatalab/MinerU/blob/master/docs/README_Windows_CUDA_Acceleration_en_US.md)
+At minimum, `OPENAI_API_KEY`, `OPENAI_API_BASE`, and `MODEL` are required for the main generation flow. The additional model fields are used by other parts of the system.
 
-### 4️⃣ Run the Application
-Start the development server by running the following command:
-```sh
+### 4. Start the web app
+
+```bash
 python src/manage.py runserver 0.0.0.0:8001
 ```
-_(Replace 8001 with any available port number of your choice.)_
 
-### 5️⃣ Access the Application
-Once the server is running, open your browser and navigate to:
-```
+Then open:
+
+```text
 http://localhost:8001
 ```
-You can now use **OptiSurvey** to upload optical communication papers, analyze research trends, and generate comprehensive literature surveys tailored to your research focus!
 
-<hr>
+## Frontend Workflow
 
-## Use Docker
-Before proceeding, ensure you have cloned the repository and configured your `.env` file in the root directory of the project. The `.env` file must include the following configurations:
-```env
-OPENAI_API_KEY=<your_openai_api_key_here>
-OPENAI_API_BASE=<your_openai_api_base_here>
-MODEL=<your_preferred_model_here>
+The standard UI flow is:
+
+1. Upload reference PDFs.
+2. Let OptiSurvey parse and process the paper set.
+3. Generate the survey draft.
+4. Preview and optionally edit the survey content in the browser.
+5. Export a regular PDF if needed.
+6. Export the final LaTeX PDF.
+7. Open `OptiResearch` once the survey is ready.
+8. Optionally run `OptiResearch` cycles on top of the generated survey.
+
+## OptiResearch
+
+`OptiResearch` is the post-generation research workspace inside the main UI.
+
+### What it does
+
+- Shows the generated survey PDF inside an embedded reader.
+- Uses the generated survey text as context for grounded Q&A.
+- Keeps the reader and Q&A tied to the current survey `survey_id` once that survey has been loaded in the page.
+
+### Unlock conditions
+
+The reader and the chat area do not unlock at the same time:
+
+- The PDF reader becomes meaningful when a survey PDF exists.
+- The grounded chat requires survey text artifacts in addition to the PDF.
+- In normal usage, the most reliable path is to generate the LaTeX PDF for the current survey and then open `OptiResearch`.
+
+### Recommended usage
+
+1. Generate the survey normally.
+2. Click the LaTeX export button to produce the final survey PDF.
+3. Open `OptiResearch`.
+4. Read the PDF in the left pane.
+5. Ask grounded questions in the right pane.
+
+### Notes for developers
+
+OptiResearch has developer-only fallback behavior controlled in `src/demo/views.py`:
+
+- `OPTIRESEARCH_DEV_MODE`
+- `OPTIRESEARCH_DEV_PDF_RELATIVE_PATH`
+- `OPTIRESEARCH_DEV_FALLBACK_TO_LATEST`
+
+These flags are currently hardcoded in the backend, not read from `.env`.
+
+Behavior summary:
+
+- `OPTIRESEARCH_DEV_MODE = True`: allows a developer override PDF path and optional fallback to the latest available LaTeX PDF.
+- `OPTIRESEARCH_DEV_MODE = False`: disables the developer override path, but the backend can still fall back to the latest available real survey result if one exists on disk.
+
+If you want `OptiResearch` to stay fully locked until the current survey is generated, that behavior should be enforced in `get_optiresearch_state()` rather than only by toggling `OPTIRESEARCH_DEV_MODE`.
+
+## OptiResearch Cycles
+
+`OptiResearch` also includes a structured ideation workflow that runs after a survey exists.
+
+### Pipeline
+
+Each cycle runs three stages:
+
+1. `Brainstorming Agent`
+2. `Hypothesis Agent`
+3. `Validation Agent`
+
+### Output of each cycle
+
+Each cycle stores:
+
+- an idea pool
+- structured hypothesis cards
+- ranked hypotheses
+- selected final candidates
+- a reviewer summary
+- a stop / continue decision
+
+### Multi-cycle behavior
+
+The UI supports repeated cycles with an auto-stop rule. In practice, the workflow usually converges in `2` to `3` cycles, unless you increase the maximum iteration count.
+
+### Export final selected hypotheses
+
+The OptiResearch cycles panel now includes an `Export Final` button.
+
+It exports the `selected_candidates` from the latest cycle as a Markdown file containing:
+
+- survey metadata
+- cycle number
+- reviewer summary
+- stop decision
+- selected hypothesis cards
+- scores, rank, evidence reasoning, and cited papers
+
+The downloaded file name follows this pattern:
+
+```text
+optiresearch_selected_hypotheses_<survey_id>_cycle_<xx>.md
 ```
-Replace the placeholders with your actual OpenAI API key, API base URL, and preferred model.
 
-### GPU Version
-If you have GPU support, you can build and run the GPU version of the Docker container using the following commands:
+## Docker
+
+Make sure the repository is cloned and `.env` is configured before using Docker.
+
+### GPU version
+
 ```bash
-# Build the Docker image
 docker build -t optisurvey .
-
-# Run the Docker container (with GPU support)
 docker run --gpus all -p 8001:8001 optisurvey
 ```
 
-### CPU Version
-If you do not have GPU support, you can run the CPU version of the Docker container. *​Note*: Before building and running, you need to manually remove the following line from the `scripts/additional_scripts.py` file:
+### CPU version
+
+For CPU-only deployment, remove the CUDA-specific line in `scripts/additional_scripts.py` before building:
+
 ```python
 "device-mode": "cuda",
 ```
-Then run the following commands:
-```bash
-# Build the Docker image
-docker build -t optisurvey-cpu .
 
-# Run the Docker container (with CPU support)
+Then build and run:
+
+```bash
+docker build -t optisurvey-cpu .
 docker run -p 8001:8001 optisurvey-cpu
 ```
 
-After starting the container, access (http://localhost:8001)[http://localhost:8001] to confirm that the application is running correctly.
+After startup, open [http://localhost:8001](http://localhost:8001).
 
-<hr>
+## GPU Setup Notes
+
+If you want GPU acceleration for MinerU and related parsing steps, follow the official MinerU setup guides:
+
+- [Ubuntu 22.04 LTS + GPU](https://github.com/opendatalab/MinerU/blob/master/docs/README_Ubuntu_CUDA_Acceleration_en_US.md)
+- [Windows 10/11 + GPU](https://github.com/opendatalab/MinerU/blob/master/docs/README_Windows_CUDA_Acceleration_en_US.md)
 
 ## Direct Survey Generation Without Frontend
 
-If you want to generate surveys directly without using the frontend, follow these steps:
+If you want to run the survey pipeline directly:
 
-1. Navigate to the `src/demo/survey_generation_pipeline` directory:
+### 1. Enter the pipeline directory
+
 ```bash
 cd src/demo/survey_generation_pipeline
 ```
-2. Copy the `.env` file to this directory. If you already have a .env file in the root of your project, you can copy it like this:
+
+### 2. Copy the root `.env`
+
 ```bash
 cp ../../../.env .
 ```
-*Note*: Ensure the `.env` file contains the required configurations (e.g., `OPENAI_API_KEY`, `OPENAI_API_BASE`, and `MODEL`).
 
-3. Run the pipeline directly:
+### 3. Run the pipeline
+
 ```bash
 python main.py
 ```
-This will execute the survey generation pipeline on our sample PDFs and output the results (.md and .pdf) to the `result` folder directly.
 
-4. Modify the script for your own sample
-The `main.py` contains the following code to generate a survey:
+This runs the sample survey generation flow and writes output artifacts to the local result directory used by the pipeline.
+
+### 4. Adjust the sample configuration
+
+The pipeline entry point contains a minimal example like this:
 
 ```python
 if __name__ == "__main__":
     root_path = "."
-    pdf_path = "./sample_pdfs" #Set this to the path of the folder containing your PDF files.
-    survey_title = "Advances in Coherent Optical Communication Systems" #Set this to the title of your survey.
-    cluster_standard = "method" #Set this to the clustering standard you want to use (e.g., method, technology, application).
-    asg_system = ASG_system(root_path, 'test', pdf_path, survey_title, cluster_standard) #test refers to the survey_id which prevents re-parsing pdfs.
-    asg_system.download_pdf() 
-    # Downloads PDFs to "./sample_pdfs". Add your own optical communication papers for analysis.
+    pdf_path = "./sample_pdfs"
+    survey_title = "Advances in Coherent Optical Communication Systems"
+    cluster_standard = "method"
+    asg_system = ASG_system(root_path, 'test', pdf_path, survey_title, cluster_standard)
+    asg_system.download_pdf()
     asg_system.parsing_pdfs()
     asg_system.description_generation()
     asg_system.agglomerative_clustering()
@@ -219,23 +279,40 @@ if __name__ == "__main__":
     asg_system.citation_generation()
 ```
 
----
+Update:
 
-## 🚀 Why Choose OptiSurvey?
+- `pdf_path` to your own paper directory
+- `survey_title` to your target topic
+- `cluster_standard` to the clustering strategy you want
 
-Unlike generic literature review tools, **OptiSurvey** understands the unique characteristics of optical communication research:
-- Recognizes domain-specific terminology and metrics (BER, OSNR, dispersion, spectral efficiency, etc.)
-- Identifies relationships between different optical technologies and methods
-- Understands the evolution of optical communication standards and technologies
-- Provides intelligent clustering tailored to optical communication research paradigms
+## Examples
 
-## 📬 Contact
+### Markdown example
 
-For questions, suggestions, or collaborations related to **OptiSurvey**, please contact:
-📧 [guobeichen0228@gmail.com](mailto:guobeichen0228@gmail.com)
+https://github.com/user-attachments/assets/fdf48927-ae0f-4040-9595-4a509ea62f08
 
-We welcome feedback from the optical communication research community!
+### LaTeX PDF example
 
-## 📄 License
+https://github.com/user-attachments/assets/db2b08f5-a328-43e1-9ae9-41c09b54214b
+
+## Why OptiSurvey
+
+Compared with generic literature review tools, OptiSurvey is biased toward optical communication research structure and terminology. It is designed to work with domain-specific concepts such as:
+
+- BER
+- OSNR
+- coherent detection
+- WDM and DWDM
+- photonic integration
+- free-space optical communication
+- optical DSP pipelines
+
+## Contact
+
+For questions, suggestions, or collaboration:
+
+- [guobeichen0228@gmail.com](mailto:guobeichen0228@gmail.com)
+
+## License
 
 [Apache License 2.0](LICENSE)

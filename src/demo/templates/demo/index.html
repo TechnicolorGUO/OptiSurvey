@@ -1452,12 +1452,12 @@ FONTS & ICONS
 				<div class="optiresearch-header">
 					<div>
 						<h3 class="optiresearch-title">Research Copilot</h3>
-						<p class="optiresearch-subtitle">Read the survey, ask grounded questions, or run one AutoResearch cycle on top of the generated review.</p>
+						<p class="optiresearch-subtitle">Read the survey, ask grounded questions, or run OptiResearch cycles on top of the generated review.</p>
 					</div>
 				</div>
 				<div class="optiresearch-tabs">
 					<button id="optiresearch-tab-button-chat" class="optiresearch-tab-button is-active" type="button" onclick="switchOptiResearchTab('chat')">Ask the Survey</button>
-					<button id="optiresearch-tab-button-autoresearch" class="optiresearch-tab-button" type="button" onclick="switchOptiResearchTab('autoresearch')">AutoResearch</button>
+					<button id="optiresearch-tab-button-autoresearch" class="optiresearch-tab-button" type="button" onclick="switchOptiResearchTab('autoresearch')">OptiResearch Cycles</button>
 				</div>
 				<div id="optiresearch-tab-chat" class="optiresearch-tab-panel is-active">
 					<div class="optiresearch-chat-layout">
@@ -1479,7 +1479,7 @@ FONTS & ICONS
 					<div class="autoresearch-panel">
 						<div class="autoresearch-cycle-banner">
 							<div>
-								<span class="autoresearch-eyebrow">Multi-Cycle Prototype</span>
+								<span class="autoresearch-eyebrow">OptiResearch Cycles</span>
 								<h4>Cycle Stack</h4>
 								<p>Start from the generated survey review, run one cycle at a time, and stack each cycle as a collapsible research round. The agent now runs as a fully automatic sequence and stops after convergence or the max iteration cap.</p>
 							</div>
@@ -1537,7 +1537,7 @@ FONTS & ICONS
 							<p class="autoresearch-note">The sequence uses an auto-stop rule: force at least 2 cycles, then stop when shortlist overlap is high and score gain becomes small, or when `max iterations` is reached. In practice this should usually stop after 2 to 3 cycles.</p>
 						</div>
 
-						<div id="autoresearch-status" class="optiresearch-status">AutoResearch will unlock when survey text is available.</div>
+						<div id="autoresearch-status" class="optiresearch-status">OptiResearch cycles will unlock when survey text is available.</div>
 
 						<div id="autoresearch-runtime" class="autoresearch-runtime" style="display:none;">
 							<div class="autoresearch-runtime-header">
@@ -2389,7 +2389,7 @@ FONTS & ICONS
 		runtime.style.display = 'block';
 		fill.style.width = `${Math.max(0, Math.min(100, progress || 0))}%`;
 		percent.textContent = `${Math.max(0, Math.min(100, progress || 0))}%`;
-		runtimeMessage.textContent = message || 'Running AutoResearch...';
+		runtimeMessage.textContent = message || 'Running OptiResearch cycles...';
 		agentList.innerHTML = (stages || []).map(stage => `
 			<div class="autoresearch-agent-item">
 				<span class="autoresearch-agent-icon ${escapeHtml(stage.status || 'pending')}">${getAutoResearchAgentIcon(stage.status)}</span>
@@ -2515,7 +2515,7 @@ FONTS & ICONS
 			? exportPayload.entry.survey_title
 			: (optiResearchState.surveyId ? `Survey ${optiResearchState.surveyId}` : 'Unknown Survey');
 		const summaryLines = [
-			'# AutoResearch Final Selected Hypotheses',
+			'# OptiResearch Final Selected Hypotheses',
 			'',
 			`- Survey: ${surveyTitle}`,
 			`- Survey ID: ${optiResearchState.surveyId || 'unknown'}`,
@@ -2608,7 +2608,7 @@ FONTS & ICONS
 		const surveyLabel = (optiResearchState.surveyId || 'survey').replace(/[^a-zA-Z0-9_-]/g, '_');
 		const cycleLabel = String(exportPayload.cycle.iteration || autoResearchState.cycleHistory.length || 1).padStart(2, '0');
 		const markdown = buildSelectedHypothesesMarkdown(exportPayload);
-		downloadTextFile(`autoresearch_selected_hypotheses_${surveyLabel}_cycle_${cycleLabel}.md`, markdown);
+		downloadTextFile(`optiresearch_selected_hypotheses_${surveyLabel}_cycle_${cycleLabel}.md`, markdown);
 		setAutoResearchStatus(`Exported final selected hypotheses from cycle ${cycleLabel}.`);
 	}
 
@@ -2622,11 +2622,11 @@ FONTS & ICONS
 				headers: { 'Accept': 'application/json' }
 			});
 			const data = await response.json();
-			renderAutoResearchRuntime(data.progress || 0, data.message || 'Running AutoResearch...', data.agent_stages || []);
+			renderAutoResearchRuntime(data.progress || 0, data.message || 'Running OptiResearch cycles...', data.agent_stages || []);
 
 			if (!response.ok || data.status === 'failed') {
 				autoResearchState.currentOperationId = null;
-				throw new Error(data.error || data.message || 'AutoResearch progress polling failed.');
+				throw new Error(data.error || data.message || 'OptiResearch cycles progress polling failed.');
 			}
 
 			if (data.status === 'completed') {
@@ -2971,13 +2971,13 @@ FONTS & ICONS
 		if (!optiResearchState.enabled) {
 			setAutoResearchStatus('Waiting for LaTeX PDF.');
 		} else if (!optiResearchState.chatEnabled) {
-			setAutoResearchStatus('AutoResearch needs the survey text, not only the PDF preview.');
+			setAutoResearchStatus('OptiResearch cycles need the survey text, not only the PDF preview.');
 		} else if (autoResearchState.running) {
-			setAutoResearchStatus('Running auto sequence across brainstorming, hypothesis writing, and validation...');
+			setAutoResearchStatus('Running OptiResearch cycles across brainstorming, hypothesis writing, and validation...');
 		} else if (autoResearchState.lastResult) {
-			setAutoResearchStatus('Latest AutoResearch cycle stack is ready for inspection.');
+			setAutoResearchStatus('Latest OptiResearch cycle stack is ready for inspection.');
 		} else {
-			setAutoResearchStatus('Ready to start a new AutoResearch sequence on the current survey.');
+			setAutoResearchStatus('Ready to start new OptiResearch cycles on the current survey.');
 		}
 
 		const chatLog = document.getElementById('optiresearch-chat-log');
@@ -3187,7 +3187,7 @@ FONTS & ICONS
 
 				const startData = await response.json();
 				if (!response.ok) {
-					throw new Error(startData.error || 'AutoResearch request failed.');
+					throw new Error(startData.error || 'OptiResearch cycles request failed.');
 				}
 				renderAutoResearchRuntime(2, `Cycle ${String(nextIteration).padStart(2, '0')} started. Launching agent pipeline...`, []);
 				const data = await pollAutoResearchOperation(startData.operation_id, startData.progress_url);
@@ -3205,8 +3205,8 @@ FONTS & ICONS
 				nextIteration += 1;
 			}
 		} catch (error) {
-			setAutoResearchStatus(`AutoResearch failed: ${error.message}`);
-			renderAutoResearchRuntime(100, `AutoResearch failed: ${error.message}`, [
+			setAutoResearchStatus(`OptiResearch cycles failed: ${error.message}`);
+			renderAutoResearchRuntime(100, `OptiResearch cycles failed: ${error.message}`, [
 				{ label: 'Brainstorming Agent', status: 'failed', progress: 100, task: 'Execution interrupted' },
 				{ label: 'Hypothesis Agent', status: 'failed', progress: 100, task: 'Execution interrupted' },
 				{ label: 'Validation Agent', status: 'failed', progress: 100, task: 'Execution interrupted' }
