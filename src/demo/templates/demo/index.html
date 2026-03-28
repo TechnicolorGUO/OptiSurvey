@@ -1532,6 +1532,7 @@ FONTS & ICONS
 									<input id="autoresearch-max-iterations" type="number" min="2" max="5" value="5" />
 								</div>
 								<button id="autoresearch-run" class="autoresearch-run" type="button" onclick="startAutoResearchSequence()" disabled>Start New</button>
+								<button id="autoresearch-export" class="autoresearch-run autoresearch-run-secondary" type="button" onclick="exportFinalSelectedHypotheses()" disabled>Export Final</button>
 							</div>
 							<p class="autoresearch-note">The sequence uses an auto-stop rule: force at least 2 cycles, then stop when shortlist overlap is high and score gain becomes small, or when `max iterations` is reached. In practice this should usually stop after 2 to 3 cycles.</p>
 						</div>
@@ -2456,15 +2457,159 @@ FONTS & ICONS
 
 	function updateAutoResearchActionButtons() {
 		const runButton = document.getElementById('autoresearch-run');
+		const exportButton = document.getElementById('autoresearch-export');
 		const maxIterationsInput = document.getElementById('autoresearch-max-iterations');
 		const autoResearchEnabled = optiResearchState.enabled && optiResearchState.chatEnabled;
+		const latestCycle = autoResearchState.cycleHistory.length
+			? (autoResearchState.cycleHistory[autoResearchState.cycleHistory.length - 1].cycle || {})
+			: {};
+		const hasExportableSelection = Array.isArray(latestCycle.selected_candidates) && latestCycle.selected_candidates.length > 0;
 
 		runButton.disabled = !autoResearchEnabled || autoResearchState.running;
 		maxIterationsInput.disabled = !autoResearchEnabled || autoResearchState.running;
+		exportButton.disabled = !autoResearchEnabled || autoResearchState.running || !hasExportableSelection;
 	}
 
 	function buildBadge(label, className = 'autoresearch-card-tag') {
 		return `<span class="${className}">${escapeHtml(label)}</span>`;
+	}
+
+	function downloadTextFile(filename, content, mimeType = 'text/markdown;charset=utf-8') {
+		const blob = new Blob([content], { type: mimeType });
+		const objectUrl = URL.createObjectURL(blob);
+		const link = document.createElement('a');
+		link.href = objectUrl;
+		link.download = filename;
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+		URL.revokeObjectURL(objectUrl);
+	}
+
+	function getLatestSelectedHypothesesForExport() {
+		const latestEntry = autoResearchState.cycleHistory.length
+			? autoResearchState.cycleHistory[autoResearchState.cycleHistory.length - 1]
+			: null;
+		if (!latestEntry) {
+			return null;
+		}
+
+		const cycle = latestEntry.cycle || {};
+		const selectedCandidates = Array.isArray(cycle.selected_candidates) ? cycle.selected_candidates : [];
+		if (!selectedCandidates.length) {
+			return null;
+		}
+
+		return {
+			entry: latestEntry,
+			cycle: cycle,
+			selectedCandidates: selectedCandidates
+		};
+	}
+
+	function buildSelectedHypothesesMarkdown(exportPayload) {
+		const cycle = exportPayload.cycle || {};
+		const selectedCandidates = exportPayload.selectedCandidates || [];
+		const exportTimestamp = new Date().toISOString();
+		const surveyTitle = exportPayload.entry && exportPayload.entry.survey_title
+			? exportPayload.entry.survey_title
+			: (optiResearchState.surveyId ? `Survey ${optiResearchState.surveyId}` : 'Unknown Survey');
+		const summaryLines = [
+			'# AutoResearch Final Selected Hypotheses',
+			'',
+			`- Survey: ${surveyTitle}`,
+			`- Survey ID: ${optiResearchState.surveyId || 'unknown'}`,
+			`- Cycle: ${cycle.iteration || autoResearchState.cycleHistory.length || 1}`,
+			`- Exported At: ${exportTimestamp}`,
+			`- Selected Count: ${selectedCandidates.length}`,
+			''
+		];
+
+		if (cycle.review_summary) {
+			summaryLines.push('## Reviewer Summary', '', cycle.review_summary, '');
+		}
+
+		if (cycle.stop_reason) {
+			summaryLines.push('## Final Decision', '', cycle.stop_reason, '');
+		}
+
+		const candidateSections = selectedCandidates.map((candidate, index) => {
+			const citedPapers = Array.isArray(candidate.cited_papers) ? candidate.cited_papers : [];
+			const evidenceSnippets = Array.isArray(candidate.evidence_snippets) ? candidate.evidence_snippets : [];
+			const metricLines = [
+				candidate.total_score !== undefined ? `- Total Score: ${candidate.total_score}/100` : '',
+				candidate.rank ? `- Rank: ${candidate.rank}` : '',
+				candidate.novelty !== undefined ? `- Novelty: ${candidate.novelty}` : '',
+				candidate.literature_grounding !== undefined ? `- Literature Grounding: ${candidate.literature_grounding}` : '',
+				candidate.clarity !== undefined ? `- Clarity: ${candidate.clarity}` : '',
+				candidate.potential_impact !== undefined ? `- Potential Impact: ${candidate.potential_impact}` : ''
+			].filter(Boolean);
+			const evidenceBlock = evidenceSnippets.length
+				? [
+					'### Evidence Snippets',
+					'',
+					...evidenceSnippets.map(item => `- ${item.source || 'Uploaded paper'}: ${item.content || ''}`),
+					''
+				]
+				: [];
+
+			return [
+				`## ${index + 1}. ${candidate.title || candidate.hypothesis_id || 'Selected Hypothesis'}`,
+				'',
+				candidate.hypothesis_id ? `- Hypothesis ID: ${candidate.hypothesis_id}` : '',
+				...metricLines,
+				citedPapers.length ? `- Cited Papers: ${citedPapers.join('; ')}` : '',
+				'',
+				'### Hypothesis Statement',
+				'',
+				candidate.hypothesis_statement || 'Not specified.',
+				'',
+				'### Research Gap',
+				'',
+				candidate.research_gap || 'Not specified.',
+				'',
+				'### Mechanism',
+				'',
+				candidate.mechanism || 'Not specified.',
+				'',
+				'### Test Plan',
+				'',
+				candidate.test_plan || 'Not specified.',
+				'',
+				'### Expected Signal',
+				'',
+				candidate.expected_signal || 'Not specified.',
+				'',
+				'### Reviewer Summary',
+				'',
+				candidate.reviewer_summary || 'No reviewer summary returned.',
+				'',
+				'### Evidence Reasoning',
+				'',
+				candidate.evidence_reasoning || 'No evidence reasoning returned.',
+				'',
+				...evidenceBlock
+			].filter(line => line !== '');
+		});
+
+		return [
+			...summaryLines,
+			...candidateSections.flatMap(section => [...section, ''])
+		].join('\n');
+	}
+
+	function exportFinalSelectedHypotheses() {
+		const exportPayload = getLatestSelectedHypothesesForExport();
+		if (!exportPayload) {
+			setAutoResearchStatus('No final selected hypotheses are available to export yet.');
+			return;
+		}
+
+		const surveyLabel = (optiResearchState.surveyId || 'survey').replace(/[^a-zA-Z0-9_-]/g, '_');
+		const cycleLabel = String(exportPayload.cycle.iteration || autoResearchState.cycleHistory.length || 1).padStart(2, '0');
+		const markdown = buildSelectedHypothesesMarkdown(exportPayload);
+		downloadTextFile(`autoresearch_selected_hypotheses_${surveyLabel}_cycle_${cycleLabel}.md`, markdown);
+		setAutoResearchStatus(`Exported final selected hypotheses from cycle ${cycleLabel}.`);
 	}
 
 	async function pollAutoResearchOperation(operationId, progressUrl) {
