@@ -161,6 +161,49 @@ def write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def load_existing_payload(path: Path) -> Dict[str, Any]:
+    if not path.exists():
+        return {}
+    payload = read_json(path)
+    return payload if isinstance(payload, dict) else {}
+
+
+def merge_by_topic(
+    existing_results: List[Dict[str, Any]],
+    new_results: List[Dict[str, Any]],
+    existing_failures: List[Dict[str, Any]],
+    new_failures: List[Dict[str, Any]],
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    merged_results: Dict[str, Dict[str, Any]] = {}
+    merged_failures: Dict[str, Dict[str, Any]] = {}
+
+    for result in existing_results:
+        topic = normalize_text(result.get("topic"))
+        if topic:
+            merged_results[topic] = result
+
+    for failure in existing_failures:
+        topic = normalize_text(failure.get("topic"))
+        if topic:
+            merged_failures[topic] = failure
+
+    for result in new_results:
+        topic = normalize_text(result.get("topic"))
+        if not topic:
+            continue
+        merged_results[topic] = result
+        merged_failures.pop(topic, None)
+
+    for failure in new_failures:
+        topic = normalize_text(failure.get("topic"))
+        if not topic:
+            continue
+        merged_failures[topic] = failure
+        merged_results.pop(topic, None)
+
+    return list(merged_results.values()), list(merged_failures.values())
+
+
 def slugify_topic(topic: str) -> str:
     base = re.sub(r"[^a-zA-Z0-9]+", "-", topic.lower()).strip("-")
     digest = hashlib.md5(topic.encode("utf-8")).hexdigest()[:10]
@@ -461,14 +504,13 @@ def run_conditioned_hypothesis(survey_id: str, idea_count: int, candidate_count:
     return payload
 
 
-def build_unconditioned_brainstorm_prompt(topic: str, citation_data: List[Dict[str, Any]], idea_count: int) -> str:
-    evidence_context = json.dumps(citation_data[:8], ensure_ascii=False, indent=2)
+def build_unconditioned_brainstorm_prompt(topic: str, idea_count: int) -> str:
     return f"""
 You are the Brainstorming Agent in AutoResearch.
-Generate exactly {idea_count} research ideas for the topic below without using any generated survey review.
+Generate exactly {idea_count} research ideas for the topic below without using any generated survey review or external reference evidence.
 
 Rules:
-- Work only from the topic and the uploaded-paper evidence.
+- Work only from the topic and your own reasoning.
 - Keep each idea concrete and distinct.
 - Return JSON only in this exact shape:
 {{
@@ -484,22 +526,20 @@ Rules:
 }}
 
 Topic: {topic}
-
-Uploaded-paper evidence:
-{evidence_context}
 """.strip()
 
 
-def build_unconditioned_hypothesis_prompt(topic: str, evidence_packs: List[Dict[str, Any]]) -> str:
+def build_unconditioned_hypothesis_prompt(topic: str, ideas: List[Dict[str, Any]]) -> str:
     return f"""
 You are the Hypothesis Agent in AutoResearch.
 Transform each brainstormed idea into one structured, falsifiable hypothesis.
-Use the uploaded-paper evidence packs for grounding when evidence exists.
+Do not use any survey review or external reference evidence.
 
 Rules:
 - Produce exactly one hypothesis per idea.
-- Use only citation source names that appear inside each idea's evidence pack.
 - Keep the fields concise and specific.
+- Set "evidence_reasoning" to a short explanation based only on the topic and idea, not papers.
+- Set "cited_papers" to an empty list.
 - Return JSON only in this exact shape:
 {{
   "hypotheses": [
@@ -520,8 +560,8 @@ Rules:
 
 Topic: {topic}
 
-Idea and evidence packs:
-{json.dumps(evidence_packs, ensure_ascii=False, indent=2)}
+Ideas:
+{json.dumps(ideas, ensure_ascii=False, indent=2)}
 """.strip()
 
 
@@ -568,21 +608,34 @@ Structured hypotheses:
 """.strip()
 
 
-def run_unconditioned_hypothesis(topic: str, citation_data: List[Dict[str, Any]], idea_count: int, candidate_count: int, max_retries: int) -> Dict[str, Any]:
+def run_unconditioned_hypothesis(topic: str, idea_count: int, candidate_count: int, max_retries: int) -> Dict[str, Any]:
     _, _, get_qwen_client = get_pipeline_imports()
-    _, attach_hypothesis_evidence, build_idea_evidence_packs, extract_json_payload, merge_autoresearch_rankings, _, _, _, generate_response = get_django_imports()
+    _, _, _, extract_json_payload, merge_autoresearch_rankings, _, _, _, generate_response = get_django_imports()
     client = get_qwen_client()
-    brainstorming_raw = generate_response(client, build_unconditioned_brainstorm_prompt(topic, citation_data, idea_count), max_retries=max_retries)
+    brainstorming_raw = generate_response(
+        client,
+        build_unconditioned_brainstorm_prompt(topic, idea_count),
+        max_retries=max_retries,
+    )
     ideas = extract_json_payload(brainstorming_raw, root_key="ideas").get("ideas", [])
     if not isinstance(ideas, list) or not ideas:
         raise ValueError("Unconditioned brainstorming returned no ideas")
 
-    evidence_packs = build_idea_evidence_packs(ideas[:idea_count], citation_data)
-    hypothesis_raw = generate_response(client, build_unconditioned_hypothesis_prompt(topic, evidence_packs), max_retries=max_retries)
+    ideas = ideas[:idea_count]
+    hypothesis_raw = generate_response(
+        client,
+        build_unconditioned_hypothesis_prompt(topic, ideas),
+        max_retries=max_retries,
+    )
     hypotheses = extract_json_payload(hypothesis_raw, root_key="hypotheses").get("hypotheses", [])
     if not isinstance(hypotheses, list) or not hypotheses:
         raise ValueError("Unconditioned hypothesis generation returned no hypotheses")
-    hypotheses = attach_hypothesis_evidence(hypotheses[: len(evidence_packs)], evidence_packs)
+    hypotheses = hypotheses[: len(ideas)]
+    for hypothesis in hypotheses:
+        if not isinstance(hypothesis, dict):
+            continue
+        hypothesis.setdefault("evidence_reasoning", "")
+        hypothesis["cited_papers"] = []
 
     validation_raw = generate_response(client, build_validation_prompt(hypotheses, candidate_count, topic), max_retries=max_retries)
     validation_payload = extract_json_payload(validation_raw)
@@ -607,7 +660,7 @@ def run_unconditioned_hypothesis(topic: str, citation_data: List[Dict[str, Any]]
             "execution_mode": "manual",
             "idea_count_requested": idea_count,
             "candidate_count_requested": candidate_count,
-            "ideas": ideas[:idea_count],
+            "ideas": ideas,
             "hypotheses": hypotheses,
             "ranked_hypotheses": merged_rankings,
             "selected_candidates": selected_candidates,
@@ -667,7 +720,6 @@ def process_topic(entry: Dict[str, Any], args: argparse.Namespace, output_dir: P
     )
     unconditioned_payload = run_unconditioned_hypothesis(
         topic=topic,
-        citation_data=citation_json if isinstance(citation_json, list) else [],
         idea_count=args.idea_count,
         candidate_count=args.candidate_count,
         max_retries=args.max_retries,
@@ -717,7 +769,9 @@ def main() -> None:
     args = parse_args()
     input_path = Path(args.input).resolve()
     output_dir = ensure_dir(Path(args.output_dir).resolve())
+    results_path = output_dir / "full_pipeline_results.json"
     manifest = read_manifest(input_path)
+    existing_payload = load_existing_payload(results_path)
 
     if not manifest:
         raise ValueError("No topics found in the manifest.")
@@ -753,12 +807,20 @@ def main() -> None:
             else:
                 print("  Done | generation only")
         except Exception as exc:
-            failures.append({"topic": topic, "error": str(exc)})
+            failure_record = {"topic": topic, "error": str(exc)}
+            failures.append(failure_record)
             print(f"  Failed | {exc}")
             traceback.print_exc()
 
         if args.sleep_between_topics > 0 and index < len(manifest):
             time.sleep(args.sleep_between_topics)
+
+    merged_results, merged_failures = merge_by_topic(
+        existing_results=existing_payload.get("results", []) if isinstance(existing_payload.get("results"), list) else [],
+        new_results=results,
+        existing_failures=existing_payload.get("failures", []) if isinstance(existing_payload.get("failures"), list) else [],
+        new_failures=failures,
+    )
 
     payload: Dict[str, Any] = {
         "config": {
@@ -772,20 +834,27 @@ def main() -> None:
             "generation_model": os.getenv("MODEL"),
             "evaluation_model": os.getenv("EVALUATE_MODEL") or os.getenv("MODEL"),
         },
-        "results": results,
-        "failures": failures,
+        "results": merged_results,
+        "failures": merged_failures,
     }
 
     if not args.skip_evaluate:
-        evaluation_results = [result["evaluation"] for result in results if "evaluation" in result]
-        payload["aggregate_summary"] = build_aggregate_summary(evaluation_results, failures)
-        detail_rows = [flatten_result_row(result["evaluation"]) for result in results if "evaluation" in result]
+        evaluation_results = [result["evaluation"] for result in merged_results if "evaluation" in result]
+        payload["aggregate_summary"] = build_aggregate_summary(evaluation_results, merged_failures)
+        detail_rows = [flatten_result_row(result["evaluation"]) for result in merged_results if "evaluation" in result]
         if detail_rows:
             write_csv(output_dir / "evaluation_summary.csv", detail_rows)
 
-    write_json(output_dir / "full_pipeline_results.json", payload)
+    write_json(results_path, payload)
+    if merged_failures:
+        failed_topics = {normalize_text(item.get("topic")) for item in merged_failures}
+        retry_entries = [entry for entry in manifest if normalize_text(entry.get("topic")) in failed_topics]
+        if retry_entries:
+            write_json(output_dir / "failed_manifest.json", retry_entries)
     print(f"Finished. Success={len(results)} Failed={len(failures)}")
-    print(f"Summary written to: {output_dir / 'full_pipeline_results.json'}")
+    print(f"Summary written to: {results_path}")
+    if merged_failures:
+        print(f"Retry manifest written to: {output_dir / 'failed_manifest.json'}")
 
 
 if __name__ == "__main__":
