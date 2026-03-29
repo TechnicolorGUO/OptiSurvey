@@ -2,6 +2,7 @@ import csv
 from email.mime import base
 import json
 import os
+import shutil
 import sys
 
 import pandas as pd
@@ -311,6 +312,7 @@ class ASG_system:
         # self.pipeline.model.load_adapter(peft_model_id ="technicolor/llama3.1_8b_conclusion_generation", adapter_name="conclusion")
 
         os.makedirs(self.txt_path, exist_ok=True)
+        self._reset_runtime_outputs()
         os.makedirs(f'{self.txt_path}/{self.survey_id}', exist_ok=True)
 
         os.makedirs(self.tsv_path, exist_ok=True)
@@ -323,6 +325,22 @@ class ASG_system:
 
         os.makedirs(self.result_path, exist_ok=True)
         os.makedirs(f'{self.result_path}/{self.survey_id}', exist_ok=True)
+
+
+    def _reset_runtime_outputs(self) -> None:
+        survey_dirs = [
+            os.path.join(self.txt_path, self.survey_id),
+            os.path.join(self.md_path, self.survey_id),
+            os.path.join(self.info_path, self.survey_id),
+            os.path.join(self.result_path, self.survey_id),
+        ]
+        for path in survey_dirs:
+            if os.path.isdir(path):
+                shutil.rmtree(path)
+
+        tsv_file = os.path.join(self.tsv_path, f"{self.survey_id}.tsv")
+        if os.path.exists(tsv_file):
+            os.remove(tsv_file)
 
 
     
@@ -413,7 +431,11 @@ class ASG_system:
         print(self.collection_names)
         print(self.file_names)
 
-        json_files = os.listdir(os.path.join(self.txt_path, self.survey_id))
+        json_files = sorted(
+            file_name
+            for file_name in os.listdir(os.path.join(self.txt_path, self.survey_id))
+            if file_name.endswith(".json") and file_name != "generated_result.json"
+        )
         ref_paper_num = len(json_files)
         print(f'The length of the json files is {ref_paper_num}')
 
@@ -449,6 +471,11 @@ class ASG_system:
         input_pd = json_data_pd
 
         if ref_paper_num>0:
+            if len(self.file_names) != ref_paper_num:
+                raise ValueError(
+                    f"Parsed paper count mismatch: file_names={len(self.file_names)} json_files={ref_paper_num}. "
+                    "This usually means stale or unexpected JSON files remain in the survey output directory."
+                )
                 
             ## change col name
             input_pd['ref_title'] = [filename for filename in self.file_names]
