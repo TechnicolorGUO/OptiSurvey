@@ -11,6 +11,84 @@ from numpy.linalg import norm
 import openai
 from .asg_retriever import Retriever
 
+def _build_citation_assignment(
+    sim_matrix,
+    chunk_sources,
+    para_index_map,
+    base_threshold=0.55,
+    dynamic_threshold=True,
+    diversity_limit=3,
+    target_assignments=3,
+    fallback_threshold=0.38,
+):
+    if sim_matrix.size == 0 or not chunk_sources or not para_index_map:
+        return {}
+
+    all_sims = sim_matrix.flatten()
+    mean_sim = np.mean(all_sims)
+    std_sim = np.std(all_sims)
+    threshold = max(base_threshold, mean_sim + 0.5 * std_sim) if dynamic_threshold else base_threshold
+
+    candidates = []
+    for sent_id in range(sim_matrix.shape[0]):
+        for chk_id in range(sim_matrix.shape[1]):
+            sim = sim_matrix[sent_id, chk_id]
+            if sim >= threshold:
+                candidates.append((sent_id, chk_id, sim))
+    candidates.sort(key=lambda x: x[2], reverse=True)
+
+    assigned = {}
+    source_count = {source: 0 for source in chunk_sources}
+
+    def try_assign(sent_id, chk_id):
+        source = chunk_sources[chk_id]
+        if sent_id in assigned or source_count[source] >= diversity_limit:
+            return False
+        assigned[sent_id] = source
+        source_count[source] += 1
+        return True
+
+    for sent_id, chk_id, _ in candidates:
+        try_assign(sent_id, chk_id)
+
+    min_needed = max(1, min(target_assignments, len(para_index_map), len(set(chunk_sources))))
+    if len(assigned) >= min_needed:
+        return assigned
+
+    para_best = {}
+    for sent_id, para_id in enumerate(para_index_map):
+        chk_id = int(np.argmax(sim_matrix[sent_id]))
+        sim = float(sim_matrix[sent_id, chk_id])
+        current = para_best.get(para_id)
+        if current is None or sim > current[2]:
+            para_best[para_id] = (sent_id, chk_id, sim)
+
+    for sent_id, chk_id, sim in sorted(para_best.values(), key=lambda x: x[2], reverse=True):
+        if sim >= fallback_threshold:
+            try_assign(sent_id, chk_id)
+        if len(assigned) >= min_needed:
+            return assigned
+
+    sentence_best = []
+    for sent_id in range(sim_matrix.shape[0]):
+        chk_id = int(np.argmax(sim_matrix[sent_id]))
+        sim = float(sim_matrix[sent_id, chk_id])
+        sentence_best.append((sent_id, chk_id, sim))
+
+    for sent_id, chk_id, sim in sorted(sentence_best, key=lambda x: x[2], reverse=True):
+        if sim < fallback_threshold:
+            continue
+        try_assign(sent_id, chk_id)
+        if len(assigned) >= min_needed:
+            return assigned
+
+    if not assigned and sentence_best:
+        sent_id, chk_id, sim = max(sentence_best, key=lambda x: x[2])
+        if sim > 0.2:
+            try_assign(sent_id, chk_id)
+
+    return assigned
+
 def getQwenClient(): 
     # openai_api_key = os.environ.get("OPENAI_API_KEY")
     # openai_api_base = os.environ.get("OPENAI_API_BASE")
@@ -703,7 +781,7 @@ from numpy.linalg import norm
 from langchain.embeddings import HuggingFaceEmbeddings
 
 def generate_survey_section_with_citations(context, client, section_title, citation_data_list, embedder,
-                                           temp=0.5, base_threshold=0.7, dynamic_threshold=True):
+                                           temp=0.5, base_threshold=0.55, dynamic_threshold=True):
     template = """
 Generate a detailed and technical content for a survey paper's section based on the following context.
 The generated content should be in 3 paragraphs of no more than 300 words in total, following the style of a standard academic survey paper.
@@ -732,6 +810,9 @@ Survey Paper Content for "{section_title}":
                 all_sentences.append(sent.strip())
                 para_index_map.append(p_idx)
 
+    if not all_sentences or not citation_data_list or embedder is None:
+        return response
+
     # -- 3. 对所有句子进行向量化嵌入（保持逻辑：一次性处理全文） ---
     sentence_embeddings = embedder.embed_documents(all_sentences)
 
@@ -751,35 +832,16 @@ Survey Paper Content for "{section_title}":
         sim_matrix.append(row)
     sim_matrix = np.array(sim_matrix)
 
-    # -- 6. 计算全局动态阈值（不按段落来，而是按全文来） ---
-    all_sims = sim_matrix.flatten()
-    mean_sim = np.mean(all_sims)
-    std_sim = np.std(all_sims)
-    k = 0.5
-    threshold = max(base_threshold, mean_sim + k * std_sim) if dynamic_threshold else base_threshold
-
-    # -- 7. 找出所有相似度 >= threshold 的 (句子ID, 引用块ID, 相似度) ---
-    candidates = []
-    for i, sent in enumerate(all_sentences):
-        for j, sim in enumerate(sim_matrix[i]):
-            if sim >= threshold:
-                candidates.append((i, j, sim))
-
-    # -- 8. 准备一个字典 source_count，用于统计每个文献 source 被使用了多少次 --
-    source_count = {s: 0 for s in chunk_sources}
-    # 对 candidates 按相似度降序排序
-    candidates.sort(key=lambda x: x[2], reverse=True)
-
-    # assigned 用来记录句子对应的引用文献
-    assigned = {}
-    diversity_limit = 3  # 同一个 source 最多被引用 3 次
-
-    for (sent_id, chk_id, sim) in candidates:
-        if sent_id not in assigned:
-            src = chunk_sources[chk_id]
-            if source_count[src] < diversity_limit:
-                assigned[sent_id] = src
-                source_count[src] += 1
+    assigned = _build_citation_assignment(
+        sim_matrix=sim_matrix,
+        chunk_sources=chunk_sources,
+        para_index_map=para_index_map,
+        base_threshold=base_threshold,
+        dynamic_threshold=dynamic_threshold,
+        diversity_limit=3,
+        target_assignments=3,
+        fallback_threshold=0.38,
+    )
 
     # -- 9. 将引用插入回句子 ---
     updated_sentences = []
@@ -964,7 +1026,7 @@ def introduction_with_citations(
     intro_text: str,
     citation_data_list: list,
     embedder: HuggingFaceEmbeddings,
-    base_threshold: float = 0.7,
+    base_threshold: float = 0.55,
     dynamic_threshold: bool = True,
     diversity_limit: int = 3
 ) -> str:
@@ -998,7 +1060,7 @@ def introduction_with_citations(
                 para_index_map.append(p_idx)
 
     # 如果拆不出任何句子，直接返回
-    if not all_sentences:
+    if not all_sentences or not citation_data_list or embedder is None:
         return intro_text
 
     # 3. 对所有句子进行 Embedding
@@ -1019,33 +1081,16 @@ def introduction_with_citations(
         sim_matrix.append(row)
     sim_matrix = np.array(sim_matrix)
 
-    # 6. 动态阈值(或固定阈值)
-    all_sims = sim_matrix.flatten()
-    mean_sim = np.mean(all_sims)
-    std_sim  = np.std(all_sims)
-    k = 0.5
-    threshold = max(base_threshold, mean_sim + k * std_sim) if dynamic_threshold else base_threshold
-
-    # 7. 找出相似度 >= threshold 的 (句子ID, 文献块ID, 相似度) 
-    candidates = []
-    for i in range(len(all_sentences)):
-        for j in range(len(chunk_embeddings)):
-            if sim_matrix[i, j] >= threshold:
-                candidates.append((i, j, sim_matrix[i, j]))
-
-    # 8. 按相似度降序排列
-    candidates.sort(key=lambda x: x[2], reverse=True)
-
-    # 记录：句子 -> 已分配的 source；并限制每个 source 最多引用次数
-    source_count = {src: 0 for src in chunk_sources}
-    assigned = {}
-
-    for (sent_id, chk_id, sim_val) in candidates:
-        if sent_id not in assigned:
-            src = chunk_sources[chk_id]
-            if source_count[src] < diversity_limit:
-                assigned[sent_id] = src
-                source_count[src] += 1
+    assigned = _build_citation_assignment(
+        sim_matrix=sim_matrix,
+        chunk_sources=chunk_sources,
+        para_index_map=para_index_map,
+        base_threshold=base_threshold,
+        dynamic_threshold=dynamic_threshold,
+        diversity_limit=diversity_limit,
+        target_assignments=2,
+        fallback_threshold=0.38,
+    )
 
     # 9. 将引用插入句尾
     updated_sentences = []
