@@ -11,6 +11,62 @@ from numpy.linalg import norm
 import openai
 from .asg_retriever import Retriever, RetrieverSingleton
 
+def _coerce_outline_items(items):
+    normalized = []
+    if not isinstance(items, list):
+        return normalized
+
+    if items and not isinstance(items[0], (list, tuple)):
+        items = [items]
+
+    for item in items:
+        if not isinstance(item, (list, tuple)) or len(item) < 2:
+            continue
+        try:
+            level = int(item[0])
+        except (TypeError, ValueError):
+            continue
+        title = str(item[1]).strip()
+        if title:
+            normalized.append([level, title])
+    return normalized
+
+
+def normalize_outline_payload(raw_outline):
+    if not raw_outline:
+        return []
+
+    if isinstance(raw_outline, list):
+        return _coerce_outline_items(raw_outline)
+
+    if not isinstance(raw_outline, str):
+        return []
+
+    text = raw_outline.strip()
+    if not text:
+        return []
+
+    candidates = [text]
+    if not (text.startswith("[") and text.endswith("]")):
+        candidates.insert(0, f"[{text}]")
+
+    for candidate in candidates:
+        try:
+            parsed = ast.literal_eval(candidate)
+        except Exception:
+            continue
+        normalized = _coerce_outline_items(parsed)
+        if normalized:
+            return normalized
+
+    pair_pattern = re.compile(r"""\[\s*(\d+)\s*,\s*(['"])(.*?)\2\s*\]""", re.DOTALL)
+    normalized = []
+    for level, _, title in pair_pattern.findall(text):
+        title = re.sub(r"\s+", " ", title).strip()
+        if title:
+            normalized.append([int(level), title])
+    return normalized
+
 def _build_citation_assignment(
     sim_matrix,
     chunk_sources,
@@ -503,7 +559,7 @@ def parse_outline_with_subsections(outline):
     """
     解析 outline 去掉一级标题并根据二级和三级标题的结构进行筛选。
     """
-    outline_list = ast.literal_eval(outline)
+    outline_list = normalize_outline_payload(outline)
     selected_subsections = []
 
     # 遍历 outline 的每一部分，生成对应的内容
@@ -895,7 +951,7 @@ Survey Paper Content for "{section_title}":
 
 # old
 def generate_survey_paper_new(title, outline, context_list, client):
-    parsed_outline = ast.literal_eval(outline)
+    parsed_outline = normalize_outline_payload(outline)
     selected_subsections = parse_outline_with_subsections(outline)
     full_survey_content = process_outline_with_empty_sections_new_new(parsed_outline, selected_subsections, context_list, client)
     
@@ -914,7 +970,7 @@ def generate_survey_paper_new(title, outline, context_list, client):
 
 # wza
 def generate_survey_paper_new(title, outline, context_list, client, citation_data_list, embedder):
-    parsed_outline = ast.literal_eval(outline)
+    parsed_outline = normalize_outline_payload(outline)
     selected_subsections = parse_outline_with_subsections(outline)
 
     full_survey_content = process_outline_with_empty_sections_citations(

@@ -934,7 +934,7 @@ def generate_future_directions_qwen(client, title, intro):
     return text
 
 def generateSurvey_qwen(survey_id, title, collection_list, pipeline):
-    outline = str(parseOutline(survey_id))
+    outline = parseOutline(survey_id)
     
     client = getQwenClient()
 
@@ -987,7 +987,7 @@ def generateSurvey_qwen(survey_id, title, collection_list, pipeline):
 
 # wza
 def generateSurvey_qwen_new(survey_id, title, collection_list, pipeline, citation_data_list, embedder):
-    outline = str(parseOutline(survey_id))
+    outline = parseOutline(survey_id)
     client = getQwenClient()
     context_list = generate_context_list(outline, collection_list, embedder)
 

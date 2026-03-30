@@ -16,7 +16,7 @@ import re
 import transformers
 from dotenv import load_dotenv
 from asg_clustername import generate_cluster_name_new
-from asg_outline import OutlineGenerator, generateSurvey_qwen_new
+from asg_outline import OutlineGenerator, generateSurvey_qwen_new, parse_outline_payload
 import os
 from markdown_pdf import MarkdownPdf, Section  # Assuming you are using markdown_pdf
 from typing import Any
@@ -367,7 +367,7 @@ class ASG_system:
         outline_generator = OutlineGenerator(self.pipeline, self.df_selected, self.cluster_names)
         outline_generator.get_cluster_info()
         messages, outline = outline_generator.generate_outline_qwen(self.survey_title)
-        outline_json = {'messages':messages, 'outline': outline}
+        outline_json = {'messages': messages, 'outline': parse_outline_payload(outline)}
         output_path = f'{self.info_path}/{self.survey_id}/outline.json'
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         with open(output_path, 'w', encoding="utf-8") as outfile:
@@ -395,7 +395,7 @@ class ASG_system:
             raise ValueError("Markdown content is empty. Cannot generate citation files.")
 
         try:
-            with open(markdown_filepath, 'w', encoding='utf-8', encoding="utf-8") as markdown_file:
+            with open(markdown_filepath, 'w', encoding='utf-8') as markdown_file:
                 markdown_file.write(markdown_content)
             print(f"Markdown content saved to: {markdown_filepath}")
         except Exception as e:
@@ -419,7 +419,7 @@ class ASG_system:
         :return: A string containing the generated Markdown content.
         """
         try:
-            with open(json_filepath, 'r', encoding='utf-8', encoding="utf-8") as json_file:
+            with open(json_filepath, 'r', encoding='utf-8') as json_file:
                 survey_data = json.load(json_file)
         except Exception as e:
             raise RuntimeError(f"Failed to read JSON file: {e}")

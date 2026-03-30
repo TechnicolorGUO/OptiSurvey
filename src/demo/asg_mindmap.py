@@ -4,6 +4,32 @@ import textwrap
 from graphviz import Digraph
 import os
 
+
+def _normalize_outline_items(raw_outline):
+    if not raw_outline:
+        return []
+
+    if isinstance(raw_outline, list):
+        items = raw_outline
+    elif isinstance(raw_outline, str):
+        pattern = re.compile(r"""\[\s*(\d+)\s*,\s*(['"])(.*?)\2\s*\]""", re.DOTALL)
+        items = [[int(level), title] for level, _, title in pattern.findall(raw_outline)]
+    else:
+        return []
+
+    normalized = []
+    for item in items:
+        if not isinstance(item, (list, tuple)) or len(item) < 2:
+            continue
+        try:
+            level = int(item[0])
+        except (TypeError, ValueError):
+            continue
+        title = str(item[1]).strip()
+        if title:
+            normalized.append((level, title))
+    return normalized
+
 def wrap_text(text, max_chars):
     """
     对文本进行自动换行包装，每行最大字符数为 max_chars。
@@ -91,12 +117,9 @@ def generate_graphviz_png(json_path, output_png_path, md_content=None, title="Do
     with open(json_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    outline_str = data.get("outline", "")
+    items = _normalize_outline_items(data.get("outline", ""))
 
     # 解析形如 [层级, '标题'] 的项
-    pattern = re.compile(r"\[(\d+),\s*'([^']+)'\]")
-    items = pattern.findall(outline_str)
-    items = [(int(level), title) for level, title in items]
 
     # 不需要的标题关键词
     undesired_keywords = {"Abstract", "Introduction", "Future Directions", "Conclusion"}

@@ -23,7 +23,7 @@ import re
 import transformers
 from dotenv import load_dotenv
 from asg_clustername import generate_cluster_name_new
-from asg_outline import OutlineGenerator, generateSurvey_qwen_new
+from asg_outline import OutlineGenerator, generateSurvey_qwen_new, parse_outline_payload
 import os
 from markdown_pdf import MarkdownPdf, Section  # Assuming you are using markdown_pdf
 from typing import Any
@@ -529,7 +529,7 @@ class ASG_system:
         outline_generator.get_cluster_info()
         messages, outline = outline_generator.generate_outline_qwen(self.survey_title)
 
-        outline_json = {'messages':messages, 'outline': outline}
+        outline_json = {'messages': messages, 'outline': parse_outline_payload(outline)}
         output_path = f'{self.info_path}/{self.survey_id}/outline.json'
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         with open(output_path, 'w', encoding="utf-8") as outfile:
