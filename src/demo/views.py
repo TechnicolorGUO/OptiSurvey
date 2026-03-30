@@ -3051,6 +3051,10 @@ def get_survey_id_sync(request, operation_id=None):
         def generate_survey_with_progress():
             try:
                 update_progress(operation_id, 40, "Generating survey outline...")
+                print("[DEBUG] survey generation | step=load_embedder")
+                current_embedder = get_embedder()
+                print(f"[DEBUG] survey generation | step=load_embedder_done | ok={current_embedder is not None}")
+                update_progress(operation_id, 50, "Building retrieval context for outline sections...")
                 
                 # 这里调用实际的survey生成函数，不再需要pipeline参数
                 generateSurvey_qwen_new(
@@ -3059,7 +3063,7 @@ def get_survey_id_sync(request, operation_id=None):
                     Global_collection_names_clustered, 
                     None,  # pipeline参数设置为None，函数内部已经改为API调用
                     Global_citation_data,
-                    embedder = get_embedder()
+                    embedder=current_embedder
                 )
                 
                 update_progress(operation_id, 90, "Survey generation completed!")

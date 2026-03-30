@@ -9,7 +9,7 @@ import concurrent.futures
 import numpy as np
 from numpy.linalg import norm
 import openai
-from .asg_retriever import Retriever
+from .asg_retriever import Retriever, RetrieverSingleton
 
 def _build_citation_assignment(
     sim_matrix,
@@ -943,10 +943,11 @@ def query_embedding_for_title(
     collection_name: str, 
     title: str, 
     n_results: int = 1, 
-    embedder: HuggingFaceEmbeddings = None
+    embedder: HuggingFaceEmbeddings = None,
+    retriever: Retriever = None,
 ):
     final_context = ""
-    retriever = Retriever()
+    retriever = retriever or RetrieverSingleton().get_retriever()
     title_embedding = embedder.embed_query(title)
 
     query_result = retriever.query_chroma(
@@ -997,28 +998,38 @@ def generate_context_list(outline, collection_list, embedder):
 
     subsections = parse_outline_with_subsections(outline)
     print("[DEBUG] subsections:", subsections)
+    print(f"[DEBUG] generate_context_list start | subsections={len(subsections)}")
 
-    embedder = embedder
     context_list_final = []
+    retriever = RetrieverSingleton().get_retriever()
     
-    for level, title in subsections:
+    for index, (level, title) in enumerate(subsections, start=1):
         if title.startswith("3"):
             cluster_idx = 0
         elif title.startswith("4"):
             cluster_idx = 1
         elif title.startswith("5"):
             cluster_idx = 2
+        else:
+            print(f"[DEBUG] skip subsection without expected cluster prefix: {title}")
+            continue
         
+        print(
+            f"[DEBUG] context subsection {index}/{len(subsections)} | "
+            f"title='{title}' | collections={len(collection_list[cluster_idx])}"
+        )
         context_temp = ""
         for coll_name in collection_list[cluster_idx]:
             retrieved_context = query_embedding_for_title(
                 collection_name=coll_name,
                 title=title,
                 n_results=3,
-                embedder=embedder
+                embedder=embedder,
+                retriever=retriever,
             )
             context_temp += retrieved_context + "\n"
         context_list_final.append(context_temp)    
+    print(f"[DEBUG] generate_context_list done | built={len(context_list_final)}")
     return context_list_final
 
 # 1.8 输入introduction 输出带引用 (collection name) 的introduction
