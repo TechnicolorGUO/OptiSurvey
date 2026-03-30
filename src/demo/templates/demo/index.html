@@ -2658,6 +2658,7 @@ FONTS & ICONS
 		latexPdfUrl: '',
 		pdfUrl: ''
 	};
+	var survey_id = null;
 
 		const autoResearchState = {
 			activeTab: 'chat',
@@ -4743,32 +4744,22 @@ function select_sections() {
 		checkProgress();
 	}
 
-	function loadSurveyContent(survey_id) {
-		if (!survey_id) {
-			// 如果没有survey_id，尝试从全局变量获取
-			$.ajax({
-				url: '/get_surveys/',
-				method: 'GET',
-				dataType: 'json',
-				success: function(data) {
-					const surveys = data.surveys;
-					if (surveys && surveys.length > 0) {
-						survey_id = surveys[surveys.length - 1]; // 使用最新的survey
-						loadSurveyContentWithId(survey_id);
-					} else {
-						alert("No survey ID found.");
-					}
-				},
-				error: function() {
-					alert("Failed to get survey ID.");
-				}
-			});
-		} else {
-			loadSurveyContentWithId(survey_id);
+	function loadSurveyContent(requestedSurveyId) {
+		const resolvedSurveyId = requestedSurveyId || window.survey_id || survey_id;
+		if (!resolvedSurveyId) {
+			alert("No survey ID found for the generated survey.");
+			return;
 		}
+		loadSurveyContentWithId(resolvedSurveyId);
 	}
 
 	function loadSurveyContentWithId(survey_id) {
+		if (!survey_id) {
+			alert("Missing survey ID.");
+			return;
+		}
+		window.survey_id = survey_id;
+		console.log('[survey] active survey_id =', survey_id);
 		// 获取 JSON 文件内容
 		$.ajax({
 			url: '/static/data/txt/' + survey_id + '/generated_result.json',
@@ -4921,7 +4912,7 @@ function select_sections() {
 			
 			// 尝试获取survey_id
 			var topic = document.getElementById("topic_input_box").value || "Default Topic";
-			if (typeof survey_id !== 'undefined') {
+			if (survey_id) {
 				form.append('survey_id', survey_id);
 			}
 			
@@ -4936,7 +4927,7 @@ function select_sections() {
 			const result = await response.json();
 			if (result.operation_id) {
 				// 轮询进度
-				await pollAsyncDownload(result.operation_id, 'pdf', result.survey_id || (typeof survey_id !== 'undefined' ? survey_id : null));
+				await pollAsyncDownload(result.operation_id, 'pdf', result.survey_id || survey_id || null);
 			} else {
 				hideUploadProgress();
 			}
@@ -4951,7 +4942,7 @@ function select_sections() {
 		showUploadProgress();
 		$('#upload-progress h4').text('Generating LaTeX PDF...');
 		updateProgressBar(0, 'Starting LaTeX PDF generation...');
-		resetOptiResearchState(typeof survey_id !== 'undefined' ? survey_id : null);
+		resetOptiResearchState(survey_id || null);
 		
 		try {
 			// 获取survey内容并转换为Markdown（与PDF生成一致）
@@ -4965,7 +4956,7 @@ function select_sections() {
 			
 			// 尝试获取survey_id
 			var topic = document.getElementById("topic_input_box").value || "Default Topic";
-			if (typeof survey_id !== 'undefined') {
+			if (survey_id) {
 				form.append('survey_id', survey_id);
 			}
 			
@@ -4979,7 +4970,7 @@ function select_sections() {
 			}
 			const result = await response.json();
 			if (result.operation_id) {
-				await pollAsyncDownload(result.operation_id, 'latex', result.survey_id || (typeof survey_id !== 'undefined' ? survey_id : null));
+				await pollAsyncDownload(result.operation_id, 'latex', result.survey_id || survey_id || null);
 			} else {
 				hideUploadProgress();
 			}
@@ -5015,7 +5006,7 @@ function select_sections() {
 
 				if (status === 'completed') {
 					// 从 result 中提取 survey_id，降级到全局变量
-					const surveyId = (data.result && data.result.survey_id) || (typeof survey_id !== 'undefined' ? survey_id : null);
+					const surveyId = (data.result && data.result.survey_id) || survey_id || null;
 					if (!surveyId) {
 						alert('PDF generation completed but survey_id is missing. Please refresh and try again.');
 						break;
@@ -5129,7 +5120,7 @@ function select_sections() {
 				const data = await res.json();
 				const progress = data.progress || 0;
 				const message = data.message || 'Processing...';
-				const surveyId = (data.result && data.result.survey_id) || fallbackSurveyId || (typeof survey_id !== 'undefined' ? survey_id : null);
+				const surveyId = (data.result && data.result.survey_id) || fallbackSurveyId || survey_id || null;
 
 				status = data.status || 'running';
 				consecutiveFailures = 0;
@@ -5166,7 +5157,7 @@ function select_sections() {
 				console.error('Progress polling error:', error);
 				consecutiveFailures += 1;
 
-				const surveyId = fallbackSurveyId || (typeof survey_id !== 'undefined' ? survey_id : null);
+				const surveyId = fallbackSurveyId || survey_id || null;
 				if (surveyId && await generatedPdfExists(type, surveyId)) {
 					updateProgressBar(100, 'PDF ready! Displaying in viewer...');
 					await new Promise(r => setTimeout(r, 500));

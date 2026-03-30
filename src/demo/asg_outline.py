@@ -265,6 +265,64 @@ class OutlineGenerator():
         clean_text = re.sub(r'\s+', ' ', text).strip()
         return messages, clean_text
 
+
+def _coerce_outline_items(items):
+    normalized = []
+    if not isinstance(items, list):
+        return normalized
+
+    if items and not isinstance(items[0], (list, tuple)):
+        items = [items]
+
+    for item in items:
+        if not isinstance(item, (list, tuple)) or len(item) < 2:
+            continue
+        try:
+            level = int(item[0])
+        except (TypeError, ValueError):
+            continue
+        title = str(item[1]).strip()
+        if title:
+            normalized.append([level, title])
+    return normalized
+
+
+def parse_outline_payload(raw_outline):
+    if not raw_outline:
+        return []
+
+    if isinstance(raw_outline, list):
+        return _coerce_outline_items(raw_outline)
+
+    if not isinstance(raw_outline, str):
+        return []
+
+    text = raw_outline.strip()
+    if not text:
+        return []
+
+    candidates = [text]
+    if not (text.startswith("[") and text.endswith("]")):
+        candidates.insert(0, f"[{text}]")
+
+    for candidate in candidates:
+        for parser in (json.loads, ast.literal_eval):
+            try:
+                parsed = parser(candidate)
+            except Exception:
+                continue
+            normalized = _coerce_outline_items(parsed)
+            if normalized:
+                return normalized
+
+    pair_pattern = re.compile(r"""\[\s*(\d+)\s*,\s*(['"])(.*?)\2\s*\]""", re.DOTALL)
+    normalized = []
+    for level, _, title in pair_pattern.findall(text):
+        title = re.sub(r"\s+", " ", title).strip()
+        if title:
+            normalized.append([int(level), title])
+    return normalized
+
 def parseOutline(survey_id):
     file_path = f'./src/static/data/txt/{survey_id}/outline.json'
     try:
@@ -274,12 +332,14 @@ def parseOutline(survey_id):
         print(f"Error loading JSON file {file_path}: {e}")
         return []
 
-    response = data.get('outline', '')
-    if not response:
+    outline_list = parse_outline_payload(data.get('outline', ''))
+    if not outline_list:
         print("No outline content found in JSON.")
         return []
 
     # 提取文本中第一个 '[' 与最后一个 ']' 之间的内容
+    return outline_list
+
     def extract_first_last(text):
         first_match = re.search(r'\[', text)
         last_match = re.search(r'\](?!.*\])', text)  # 使用负向前瞻查找最后一个 ']'

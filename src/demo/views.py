@@ -44,7 +44,7 @@ from django.core.files.storage import default_storage
 # from .parse import DocumentLoading
 from .asg_retriever import legal_pdf, process_pdf, query_embeddings_new_new, cleanup_retriever
 from .asg_generator import generate, generate_sentence_patterns, normalize_query_list, cleanup_openai_client, getQwenClient, generateResponse
-from .asg_outline import OutlineGenerator,generateOutlineHTML_qwen, generateSurvey_qwen_new
+from .asg_outline import OutlineGenerator,generateOutlineHTML_qwen, generateSurvey_qwen_new, parse_outline_payload
 from .asg_clustername import generate_cluster_name_new
 from .postprocess import generate_references_section
 from .asg_query import generate_generic_query_qwen, generate_query_qwen
@@ -2808,7 +2808,7 @@ def automatic_taxonomy_sync(request, operation_id=None):
             outline_generator.get_cluster_info()
             messages, outline = outline_generator.generate_outline_qwen(Global_survey_title, Global_cluster_num)
             
-            outline_json = {'messages': messages, 'outline': outline}
+            outline_json = {'messages': messages, 'outline': parse_outline_payload(outline)}
             output_path = TXT_PATH + Global_survey_id + '/outline.json'
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
             with open(output_path, 'w', encoding="utf-8") as outfile:
@@ -2884,10 +2884,10 @@ def save_outline(request):
                         "content": "Finish the outline..."
                     }
                 ],
-                "outline": str(updated_outline)
+                "outline": parse_outline_payload(updated_outline)
             }
 
-            file_path = os.path.join(settings.BASE_DIR, 'static', 'data', 'txt', Global_survey_id,'outline.json')
+            file_path = os.path.join('.', 'src', 'static', 'data', 'txt', Global_survey_id, 'outline.json')
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
             with open(file_path, 'w', encoding='utf-8') as file:
