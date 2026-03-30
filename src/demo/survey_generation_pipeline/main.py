@@ -13,7 +13,7 @@ import urllib
 from asg_retriever import process_pdf, legal_pdf
 from asg_loader import DocumentLoading
 from asg_retriever import Retriever, query_embeddings_new_new
-from asg_generator import generate_sentence_patterns, generate
+from asg_generator import generate_sentence_patterns, generate, normalize_query_list
 from asg_query import generate_query_qwen, generate_generic_query_qwen
 from category_and_tsne import clustering
 from langchain_text_splitters  import RecursiveCharacterTextSplitter
@@ -585,7 +585,7 @@ class ASG_system:
     def description_generation(self, retriever) -> None:
         user_input = self.cluster_standard
         query= self.cluster_standard
-        query_list = generate_sentence_patterns(query)
+        query_list = normalize_query_list(generate_sentence_patterns(query))
         retrieval_info = {
             "user_input": user_input,
             "query_list": query_list,

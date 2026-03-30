@@ -77,6 +77,41 @@ Begin your response immediately with the list, and do not include any other text
     response = generateResponse(client, template)
     return response
 
+def normalize_query_list(raw_query_list):
+    if isinstance(raw_query_list, list):
+        return [str(item).strip() for item in raw_query_list if str(item).strip()]
+
+    if raw_query_list is None:
+        return []
+
+    if not isinstance(raw_query_list, str):
+        text = str(raw_query_list).strip()
+        return [text] if text else []
+
+    text = raw_query_list.strip()
+    if not text:
+        return []
+
+    for parser in (json.loads, ast.literal_eval):
+        try:
+            parsed = parser(text)
+        except Exception:
+            continue
+        if isinstance(parsed, list):
+            return [str(item).strip() for item in parsed if str(item).strip()]
+
+    extracted = extract_query_list(text)
+    if extracted:
+        for parser in (json.loads, ast.literal_eval):
+            try:
+                parsed = parser(extracted)
+            except Exception:
+                continue
+            if isinstance(parsed, list):
+                return [str(item).strip() for item in parsed if str(item).strip()]
+
+    return [text]
+
 def generate(context, keyword, paper_title, temp=0.7):
     template = f"""
 Context:

@@ -43,7 +43,7 @@ from django.core.files.storage import default_storage
 
 # from .parse import DocumentLoading
 from .asg_retriever import legal_pdf, process_pdf, query_embeddings_new_new, cleanup_retriever
-from .asg_generator import generate, generate_sentence_patterns, cleanup_openai_client, getQwenClient, generateResponse
+from .asg_generator import generate, generate_sentence_patterns, normalize_query_list, cleanup_openai_client, getQwenClient, generateResponse
 from .asg_outline import OutlineGenerator,generateOutlineHTML_qwen, generateSurvey_qwen_new
 from .asg_clustername import generate_cluster_name_new
 from .postprocess import generate_references_section
@@ -1868,6 +1868,21 @@ def upload_refs_sync(request):
             global Global_collection_names
             global Global_survey_title
             global Global_file_names
+            global Global_citation_data
+            global Global_description_list
+            global Global_collection_names_clustered
+            global Global_ref_list
+            global Global_cluster_names
+            global Global_category_label
+
+            Global_collection_names = []
+            Global_file_names = []
+            Global_citation_data = []
+            Global_description_list = []
+            Global_collection_names_clustered = []
+            Global_ref_list = []
+            Global_cluster_names = []
+            Global_category_label = []
 
             Global_survey_title = request.POST.get('topic', False)
             process_pdf_mode = request.POST.get('mode', False)
@@ -2684,11 +2699,14 @@ def automatic_taxonomy_sync(request, operation_id=None):
             print(f"Parsed ref_list: {ref_list}")
             print(f"Global_cluster_num: {Global_cluster_num}")
             print(f"Query: {query}")
+
+            Global_citation_data = []
+            Global_description_list = []
             
             update_progress(operation_id, 20, "Generating query patterns...")
             
             # 生成查询模式
-            query_list = generate_sentence_patterns(query)
+            query_list = normalize_query_list(generate_sentence_patterns(query))
             
             update_progress(operation_id, 30, "Processing collections...")
             

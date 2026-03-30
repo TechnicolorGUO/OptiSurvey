@@ -9,6 +9,8 @@ from langchain_huggingface import HuggingFaceEmbeddings
 import time
 import concurrent.futures
 
+from asg_generator import normalize_query_list
+
 # 禁用 ChromaDB 遥测以避免错误信息
 os.environ['ANONYMIZED_TELEMETRY'] = 'False'
 
@@ -277,8 +279,13 @@ def query_embeddings_new_new(collection_name: str, query_list: list, retriever):
     final_context = ""
     citation_data_list = []
     seen_chunks = set()
+    normalized_queries = normalize_query_list(query_list)
 
-    for query_text in query_list:
+    if not normalized_queries:
+        print(f"No valid queries were generated for collection '{collection_name}'")
+        return final_context, citation_data_list
+
+    for query_text in normalized_queries:
         try:
             query_embeddings = embedder.embed_query(query_text)
             query_result = retriever.query_chroma(

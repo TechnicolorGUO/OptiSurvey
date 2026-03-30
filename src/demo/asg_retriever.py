@@ -9,6 +9,8 @@ from langchain_huggingface import HuggingFaceEmbeddings
 import time
 import concurrent.futures
 
+from .asg_generator import normalize_query_list
+
 # 禁用 ChromaDB 遥测以避免错误信息
 os.environ['ANONYMIZED_TELEMETRY'] = 'False'
 
@@ -284,6 +286,11 @@ def query_embeddings_new_new(collection_name: str, query_list: list):
     final_context = ""  # Stores concatenated context
     citation_data_list = []  # Stores chunk content and collection name as source
     seen_chunks = set()  # Ensures unique chunks are added
+    normalized_queries = normalize_query_list(query_list)
+
+    if not normalized_queries:
+        print(f"No valid queries were generated for collection '{collection_name}'")
+        return final_context, citation_data_list
 
     def process_query(query_text):
         # Embed the query text and retrieve relevant chunks
@@ -300,10 +307,10 @@ def query_embeddings_new_new(collection_name: str, query_list: list):
             return None
 
     # Limit the number of concurrent threads to prevent resource exhaustion
-    max_workers = min(len(query_list), 5)  # Limit to 5 concurrent threads
+    max_workers = min(len(normalized_queries), 5)  # Limit to 5 concurrent threads
     
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        future_to_query = {executor.submit(process_query, q): q for q in query_list}
+        future_to_query = {executor.submit(process_query, q): q for q in normalized_queries}
         for future in concurrent.futures.as_completed(future_to_query):
             query_text = future_to_query[future]
             try:

@@ -7,7 +7,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from asg_retriever import legal_pdf
 from asg_loader import DocumentLoading
 from asg_retriever import Retriever, query_embeddings_new_new
-from asg_generator import generate_sentence_patterns, generate
+from asg_generator import generate_sentence_patterns, generate, normalize_query_list
 from category_and_tsne import clustering
 from langchain_text_splitters  import RecursiveCharacterTextSplitter
 import time
@@ -302,7 +302,7 @@ class ASG_system:
 
     def description_generation(self) -> None:
         query= self.cluster_standard
-        query_list = generate_sentence_patterns(query)
+        query_list = normalize_query_list(generate_sentence_patterns(query))
         for name in self.collection_names:
             context, citation_data = query_embeddings_new_new(name, query_list)
             self.citation_data.extend(citation_data)
