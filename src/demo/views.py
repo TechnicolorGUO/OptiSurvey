@@ -60,10 +60,8 @@ from sentence_transformers import SentenceTransformer
 from dotenv import load_dotenv
 import signal
 import threading
-import numpy as np
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 from functools import wraps
-from numpy.linalg import norm
 
 load_dotenv()
 # # 打印所有环境变量（可选，调试时使用）
@@ -79,7 +77,6 @@ load_dotenv()
 
 # 导入异步任务支持
 from .middleware import async_task, task_manager
-from .survey_generator_api import _build_citation_assignment
 
 import os
 from pathlib import Path
@@ -3445,90 +3442,10 @@ def fix_citation_punctuation_md(text):
     fixed_text = re.sub(pattern, replacement, text)
     return fixed_text
 
-def _inject_citations_into_markdown(paper_text, citation_data_list, embedder):
-    if not paper_text or not citation_data_list or embedder is None:
-        return paper_text
-
-    paragraphs = paper_text.split('\n\n')
-    all_sentences = []
-    para_index_map = []
-
-    for p_idx, para in enumerate(paragraphs):
-        stripped = para.strip()
-        if not stripped:
-            continue
-        if stripped.startswith('#') or stripped.startswith('<div') or stripped.startswith('!['):
-            continue
-        sentences = re.split(r'(?<=[.!?])\s+', stripped)
-        for sentence in sentences:
-            sentence = sentence.strip()
-            if sentence:
-                all_sentences.append(sentence)
-                para_index_map.append(p_idx)
-
-    if not all_sentences:
-        return paper_text
-
-    sentence_embeddings = embedder.embed_documents(all_sentences)
-    chunk_texts = [item.get("content", "") for item in citation_data_list if item.get("content")]
-    chunk_sources = [item.get("source", "").strip() for item in citation_data_list if item.get("content") and item.get("source")]
-
-    if not chunk_texts or not chunk_sources:
-        return paper_text
-
-    chunk_embeddings = embedder.embed_documents(chunk_texts)
-
-    sim_matrix = []
-    for sentence_embedding in sentence_embeddings:
-        row = [
-            np.dot(sentence_embedding, chunk_embedding) / (norm(sentence_embedding) * norm(chunk_embedding) + 1e-9)
-            for chunk_embedding in chunk_embeddings
-        ]
-        sim_matrix.append(row)
-    sim_matrix = np.array(sim_matrix)
-
-    assigned = _build_citation_assignment(
-        sim_matrix=sim_matrix,
-        chunk_sources=chunk_sources,
-        para_index_map=para_index_map,
-        base_threshold=0.55,
-        dynamic_threshold=True,
-        diversity_limit=3,
-        target_assignments=min(8, max(3, len(set(para_index_map)))),
-        fallback_threshold=0.38,
-    )
-
-    if not assigned:
-        return paper_text
-
-    updated_paragraphs = paragraphs[:]
-    para_sentences_map = [[] for _ in range(len(paragraphs))]
-
-    for sentence_index, sentence in enumerate(all_sentences):
-        if sentence_index in assigned:
-            para_sentences_map[para_index_map[sentence_index]].append(f"{sentence} [{assigned[sentence_index]}]")
-        else:
-            para_sentences_map[para_index_map[sentence_index]].append(sentence)
-
-    rebuilt_para_indices = set()
-    for para_index, rebuilt_sentences in enumerate(para_sentences_map):
-        if rebuilt_sentences:
-            updated_paragraphs[para_index] = " ".join(rebuilt_sentences)
-            rebuilt_para_indices.add(para_index)
-
-    if not rebuilt_para_indices:
-        return paper_text
-
-    return "\n\n".join(updated_paragraphs)
-
 def finalize_survey_paper(paper_text, 
                           Global_collection_names, 
                           Global_file_names):
-    global Global_survey_id, Global_survey_title, Global_ref_list, Global_citation_data
-
-    if not re.search(r'\[[^\[\]]+\]', paper_text) and Global_citation_data:
-        paper_text = _inject_citations_into_markdown(paper_text, Global_citation_data, get_embedder())
-        print(f"[citation-fallback] injected_citations={len(re.findall(r'\\[[^\\[\\]]+\\]', paper_text))}")
+    global Global_survey_id, Global_survey_title, Global_ref_list
 
     paper_text = remove_invalid_citations(paper_text, Global_collection_names)
     normalized_text, citation_mapping = normalize_citations_with_mapping(paper_text)
