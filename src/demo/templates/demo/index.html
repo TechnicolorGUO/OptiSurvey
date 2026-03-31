@@ -1793,7 +1793,7 @@ FONTS & ICONS
 								</div>
 								<div class="autoresearch-cycle-stat">
 									<strong id="autoresearch-cycle-idea-stat">n=10 ideas</strong>
-									<span>Per cycle idea pool</span>
+									<span>Per cycle gap-centered idea pool</span>
 								</div>
 								<div class="autoresearch-cycle-stat">
 									<strong id="autoresearch-cycle-candidate-stat">top 3 candidates</strong>
@@ -1806,24 +1806,24 @@ FONTS & ICONS
 							<div class="autoresearch-step">
 								<span class="autoresearch-step-index">1</span>
 								<h5>Brainstorming Agent</h5>
-								<p>Expands the generated review into a first-pass idea pool without feasibility filtering.</p>
+								<p>Expands the generated review into a gap-centered idea pool without feasibility filtering.</p>
 							</div>
 							<div class="autoresearch-step">
 								<span class="autoresearch-step-index">2</span>
 								<h5>Hypothesis Agent</h5>
-								<p>Writes each idea into a fixed card schema and anchors it to uploaded-paper evidence when available.</p>
+								<p>Turns each research gap into a fixed card schema and anchors it to uploaded-paper evidence when available.</p>
 							</div>
 							<div class="autoresearch-step">
 								<span class="autoresearch-step-index">3</span>
 								<h5>Validation Agent</h5>
-								<p>Acts like a reviewer, scores the hypotheses, and keeps the top candidates for the cycle.</p>
+								<p>Acts like a reviewer, judges gap quality plus hypothesis fit, and keeps the top candidates for the cycle.</p>
 							</div>
 						</div>
 
 						<div class="autoresearch-control-card">
 							<div class="autoresearch-control-grid">
 								<div class="autoresearch-field">
-									<label for="autoresearch-idea-count">Brainstorming ideas</label>
+									<label for="autoresearch-idea-count">Gap-centered ideas</label>
 									<input id="autoresearch-idea-count" type="number" min="3" max="15" value="10" />
 								</div>
 								<div class="autoresearch-field">
@@ -1858,7 +1858,7 @@ FONTS & ICONS
 
 						<div class="autoresearch-results">
 							<div id="autoresearch-empty" class="autoresearch-empty-state">
-								Start a sequence to generate an idea pool, fixed-format hypothesis cards, and reviewer-ranked candidates for each stacked cycle.
+								Start a sequence to generate a gap-centered idea pool, fixed-format hypothesis cards, and reviewer-ranked candidates for each stacked cycle.
 							</div>
 
 							<div id="autoresearch-content" style="display:none;">
@@ -3089,6 +3089,7 @@ FONTS & ICONS
 					? cycle.selected_candidates.map(candidate => ({
 						hypothesis_id: candidate.hypothesis_id,
 						title: candidate.title,
+						research_gap: candidate.research_gap,
 						hypothesis_statement: candidate.hypothesis_statement,
 						total_score: candidate.total_score
 					}))
@@ -3203,13 +3204,13 @@ FONTS & ICONS
 				...metricLines,
 				citedPapers.length ? `- Cited Papers: ${citedPapers.join('; ')}` : '',
 				'',
-				'### Hypothesis Statement',
-				'',
-				candidate.hypothesis_statement || 'Not specified.',
-				'',
 				'### Research Gap',
 				'',
 				candidate.research_gap || 'Not specified.',
+				'',
+				'### Hypothesis Statement',
+				'',
+				candidate.hypothesis_statement || 'Not specified.',
 				'',
 				'### Mechanism',
 				'',
@@ -3294,10 +3295,17 @@ FONTS & ICONS
 					</div>
 				</summary>
 				<div class="autoresearch-card-body">
-					<div class="autoresearch-idea-copy">${escapeHtml(idea.core_insight || 'No summary returned.')}</div>
 					<div class="autoresearch-card-section">
-						<strong>Novelty Basis</strong>
-						<p>${escapeHtml(idea.novelty_basis || 'Not specified.')}</p>
+						<strong>Research Gap</strong>
+						<p>${escapeHtml(idea.research_gap || 'Not specified.')}</p>
+					</div>
+					<div class="autoresearch-card-section">
+						<strong>Proposed Direction</strong>
+						<p>${escapeHtml(idea.core_insight || 'No summary returned.')}</p>
+					</div>
+					<div class="autoresearch-card-section">
+						<strong>Gap Basis</strong>
+						<p>${escapeHtml(idea.gap_basis || idea.novelty_basis || 'Not specified.')}</p>
 					</div>
 					<div class="autoresearch-card-section">
 						<strong>Why Now</strong>
@@ -3395,6 +3403,10 @@ FONTS & ICONS
 					</div>
 				</summary>
 				<div class="autoresearch-card-body">
+					<div class="autoresearch-card-section">
+						<strong>Research Gap</strong>
+						<p>${escapeHtml(candidate.research_gap || 'Not specified.')}</p>
+					</div>
 					<div class="autoresearch-candidate-copy">${escapeHtml(candidate.hypothesis_statement || 'No candidate statement returned.')}</div>
 					<div class="autoresearch-card-section">
 						<strong>Reviewer Summary</strong>
@@ -3473,9 +3485,9 @@ FONTS & ICONS
 
 		document.getElementById('autoresearch-canvas-body').innerHTML = `
 			<div class="autoresearch-canvas-grid">
-				${renderCanvasAgent('Brainstorming Agent', 'Cycle idea pool. Click to expand the generated ideas.', `${ideas.length} ideas`, brainstormingHtml)}
-				${renderCanvasAgent('Hypothesis Agent', 'Structured hypothesis cards. This panel opens by default.', `${hypotheses.length} cards`, hypothesisHtml, { defaultOpen: true })}
-				${renderCanvasAgent('Validation Agent', 'Ranked shortlist and reviewer judgement.', `${selectedCandidates.length} results`, validationHtml)}
+				${renderCanvasAgent('Brainstorming Agent', 'Cycle gap-centered idea pool. Click to expand the generated ideas.', `${ideas.length} ideas`, brainstormingHtml)}
+				${renderCanvasAgent('Hypothesis Agent', 'Structured hypothesis cards built from the identified research gaps. This panel opens by default.', `${hypotheses.length} cards`, hypothesisHtml, { defaultOpen: true })}
+				${renderCanvasAgent('Validation Agent', 'Ranked shortlist and reviewer judgement with research-gap-first review.', `${selectedCandidates.length} results`, validationHtml)}
 			</div>
 		`;
 
@@ -3616,7 +3628,7 @@ FONTS & ICONS
 		} else if (!optiResearchState.chatEnabled) {
 			setAutoResearchStatus('OptiResearch cycles need the survey text, not only the PDF preview.');
 		} else if (autoResearchState.running) {
-			setAutoResearchStatus('Running OptiResearch cycles across brainstorming, hypothesis writing, and validation...');
+			setAutoResearchStatus('Running OptiResearch cycles across gap finding, hypothesis writing, and validation...');
 		} else if (autoResearchState.lastResult) {
 			setAutoResearchStatus('Latest OptiResearch cycle stack is ready for inspection.');
 		} else {

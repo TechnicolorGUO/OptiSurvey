@@ -1030,12 +1030,16 @@ def _build_idea_evidence_packs(ideas, citation_data_list):
     for index, idea in enumerate(ideas, start=1):
         idea_id = str(idea.get('id') or f'I{index}')
         title = str(idea.get('title') or '').strip() or f'Idea {index}'
+        research_gap = str(idea.get('research_gap') or '').strip()
+        gap_basis = str(idea.get('gap_basis') or idea.get('novelty_basis') or '').strip()
         core_insight = str(idea.get('core_insight') or idea.get('description') or '').strip()
-        seed_text = " ".join(part for part in [title, core_insight] if part).strip()
+        seed_text = " ".join(part for part in [title, research_gap, gap_basis, core_insight] if part).strip()
         citations = _select_citations_for_seed(seed_text, citation_data_list, max_items=3)
         evidence_packs.append({
             'idea_id': idea_id,
             'title': title,
+            'research_gap': research_gap,
+            'gap_basis': gap_basis,
             'core_insight': core_insight,
             'citations': citations,
         })
@@ -1145,6 +1149,7 @@ def _coerce_autoresearch_history(history):
             normalized_candidates.append({
                 'hypothesis_id': str(candidate.get('hypothesis_id') or '').strip(),
                 'title': str(candidate.get('title') or '').strip(),
+                'research_gap': str(candidate.get('research_gap') or '').strip(),
                 'hypothesis_statement': str(candidate.get('hypothesis_statement') or '').strip(),
                 'total_score': candidate.get('total_score'),
             })
@@ -1171,6 +1176,7 @@ def _tokenize_autoresearch_text(value):
 def _candidate_signature(candidate):
     return " ".join([
         str(candidate.get('title') or ''),
+        str(candidate.get('research_gap') or ''),
         str(candidate.get('hypothesis_statement') or ''),
     ]).strip()
 
@@ -1196,6 +1202,7 @@ def _build_prior_cycle_digest(history):
                 {
                     'hypothesis_id': candidate.get('hypothesis_id', ''),
                     'title': candidate.get('title', ''),
+                    'research_gap': candidate.get('research_gap', ''),
                     'hypothesis_statement': candidate.get('hypothesis_statement', ''),
                     'total_score': candidate.get('total_score'),
                 }
@@ -1483,7 +1490,7 @@ def run_autoresearch_sync(request, operation_id=None):
         {
             'agent_stages': _autoresearch_stage_snapshot(
                 brainstorming_status='active',
-                brainstorming_task='Generating idea pool from review',
+                brainstorming_task='Generating gap-centered idea pool from review',
                 hypothesis_task='Queued behind idea generation',
                 validation_task='Waiting for structured hypotheses',
             )
@@ -1493,20 +1500,23 @@ def run_autoresearch_sync(request, operation_id=None):
     brainstorming_prompt = f"""
 You are the Brainstorming Agent in AutoResearch.
 Your job is to propose exactly {idea_count} research ideas for cycle {cycle_index} based only on the survey review below.
+The core output is the research gap: each idea must start from a specific unresolved limitation, contradiction, underexplored setting, or missing capability surfaced by the review.
 
 Rules:
-- Focus on novel or high-value directions implied by the survey.
+- Focus first on identifying high-value research gaps implied by the survey, then attach a concrete direction that addresses each gap.
 - Do not perform feasibility filtering yet.
 - Keep each idea concrete and distinct.
+- Make the research gaps non-overlapping across ideas.
 - Avoid repeating or lightly rephrasing ideas that already appeared in earlier shortlisted candidates.
 - Return JSON only in this exact shape:
 {{
   "ideas": [
     {{
       "id": "I1",
+      "research_gap": "One concise statement of the unresolved gap",
       "title": "Short title",
-      "core_insight": "One concise paragraph",
-      "novelty_basis": "Why this seems new from the review",
+      "gap_basis": "What in the review suggests this gap is real and important",
+      "core_insight": "One concise paragraph describing the proposed direction that addresses the gap",
       "why_now": "Why this matters now"
     }}
   ]
@@ -1531,9 +1541,13 @@ Survey review context:
         ideas = ideas[:idea_count]
         for index, idea in enumerate(ideas, start=1):
             idea['id'] = str(idea.get('id') or f'I{index}')
+            idea['research_gap'] = str(
+                idea.get('research_gap') or idea.get('gap_statement') or idea.get('problem_gap') or ''
+            ).strip()
             idea['title'] = str(idea.get('title') or f'Idea {index}').strip()
             idea['core_insight'] = str(idea.get('core_insight') or idea.get('description') or '').strip()
-            idea['novelty_basis'] = str(idea.get('novelty_basis') or '').strip()
+            idea['gap_basis'] = str(idea.get('gap_basis') or idea.get('novelty_basis') or '').strip()
+            idea['novelty_basis'] = idea['gap_basis']
             idea['why_now'] = str(idea.get('why_now') or '').strip()
     except Exception as e:
         update_progress(
@@ -1559,7 +1573,7 @@ Survey review context:
                 brainstorming_status='completed',
                 brainstorming_task=f'Generated {len(ideas)} ideas',
                 hypothesis_status='active',
-                hypothesis_task='Converting ideas into fixed-schema cards',
+                hypothesis_task='Converting research gaps into fixed-schema cards',
                 validation_task='Waiting for scored candidates',
             )
         }
@@ -1569,11 +1583,13 @@ Survey review context:
 You are the Hypothesis Agent in AutoResearch.
 Transform each brainstormed idea into one structured, falsifiable hypothesis.
 You must ground each hypothesis in the provided uploaded-paper evidence pack when evidence exists.
+Treat each idea's `research_gap` as the anchor: preserve its intent, sharpen it if needed, and make the hypothesis directly answer that gap.
 
 Rules:
 - Produce exactly one hypothesis per idea.
 - Use only citation source names that appear inside each idea's evidence pack.
 - Keep the fields concise and specific.
+- The `research_gap` field should be a sharper version of the brainstormed gap, not a generic motivation sentence.
 - Avoid semantic duplication with prior shortlisted candidates.
 - Return JSON only in this exact shape:
 {{
@@ -1581,8 +1597,8 @@ Rules:
     {{
       "idea_id": "I1",
       "hypothesis_id": "H1",
-      "title": "Card title",
       "research_gap": "Gap statement",
+      "title": "Card title",
       "hypothesis_statement": "If ..., then ... because ...",
       "mechanism": "Underlying logic",
       "test_plan": "How to test it",
@@ -1655,7 +1671,8 @@ Scoring dimensions:
 Rules:
 - Rank all hypotheses from strongest to weakest.
 - Select the best {candidate_count} candidates.
-- Keep reviewer summaries short and specific.
+- Prioritize candidates with the clearest, most consequential research gaps and with hypotheses that directly address those gaps.
+- Keep reviewer summaries short and specific, and explicitly mention the quality of the research gap plus the strength or weakness of the hypothesis fit.
 - If this is auto mode, recommend `continue` only when the new shortlist is still materially novel and meaningfully stronger or different from earlier cycles.
 - Return JSON only in this exact shape:
 {{

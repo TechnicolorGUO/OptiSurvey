@@ -508,18 +508,21 @@ def build_unconditioned_brainstorm_prompt(topic: str, idea_count: int) -> str:
     return f"""
 You are the Brainstorming Agent in AutoResearch.
 Generate exactly {idea_count} research ideas for the topic below without using any generated survey review or external reference evidence.
+The core output is the research gap: each idea must start from a specific unresolved limitation, contradiction, underexplored setting, or missing capability implied by the topic.
 
 Rules:
 - Work only from the topic and your own reasoning.
 - Keep each idea concrete and distinct.
+- Make the research gaps non-overlapping across ideas.
 - Return JSON only in this exact shape:
 {{
   "ideas": [
     {{
       "id": "I1",
+      "research_gap": "One concise statement of the unresolved gap",
       "title": "Short title",
-      "core_insight": "One concise paragraph",
-      "novelty_basis": "Why this seems new",
+      "gap_basis": "Why this gap is plausible and important from the topic alone",
+      "core_insight": "One concise paragraph describing the proposed direction that addresses the gap",
       "why_now": "Why this matters now"
     }}
   ]
@@ -534,10 +537,12 @@ def build_unconditioned_hypothesis_prompt(topic: str, ideas: List[Dict[str, Any]
 You are the Hypothesis Agent in AutoResearch.
 Transform each brainstormed idea into one structured, falsifiable hypothesis.
 Do not use any survey review or external reference evidence.
+Treat each idea's `research_gap` as the anchor: preserve its intent, sharpen it if needed, and make the hypothesis directly answer that gap.
 
 Rules:
 - Produce exactly one hypothesis per idea.
 - Keep the fields concise and specific.
+- The `research_gap` field should be a sharper version of the brainstormed gap, not a generic motivation sentence.
 - Set "evidence_reasoning" to a short explanation based only on the topic and idea, not papers.
 - Set "cited_papers" to an empty list.
 - Return JSON only in this exact shape:
@@ -546,14 +551,14 @@ Rules:
     {{
       "idea_id": "I1",
       "hypothesis_id": "H1",
-      "title": "Card title",
       "research_gap": "Gap statement",
+      "title": "Card title",
       "hypothesis_statement": "If ..., then ... because ...",
       "mechanism": "Underlying logic",
       "test_plan": "How to test it",
       "expected_signal": "What result would support it",
-      "evidence_reasoning": "How the uploaded papers motivate it",
-      "cited_papers": ["Paper A", "Paper B"]
+      "evidence_reasoning": "How the topic context motivates it",
+      "cited_papers": []
     }}
   ]
 }}
@@ -580,7 +585,8 @@ Scoring dimensions:
 Rules:
 - Rank all hypotheses from strongest to weakest.
 - Select the best {candidate_count} candidates.
-- Keep reviewer summaries short and specific.
+- Prioritize candidates with the clearest, most consequential research gaps and with hypotheses that directly address those gaps.
+- Keep reviewer summaries short and specific, and explicitly mention the quality of the research gap plus the strength or weakness of the hypothesis fit.
 - Return JSON only in this exact shape:
 {{
   "review_summary": "Overall summary",
@@ -622,6 +628,19 @@ def run_unconditioned_hypothesis(topic: str, idea_count: int, candidate_count: i
         raise ValueError("Unconditioned brainstorming returned no ideas")
 
     ideas = ideas[:idea_count]
+    for index, idea in enumerate(ideas, start=1):
+        if not isinstance(idea, dict):
+            continue
+        idea["id"] = str(idea.get("id") or f"I{index}")
+        idea["research_gap"] = str(
+            idea.get("research_gap") or idea.get("gap_statement") or idea.get("problem_gap") or ""
+        ).strip()
+        idea["title"] = str(idea.get("title") or f"Idea {index}").strip()
+        idea["gap_basis"] = str(idea.get("gap_basis") or idea.get("novelty_basis") or "").strip()
+        idea["novelty_basis"] = idea["gap_basis"]
+        idea["core_insight"] = str(idea.get("core_insight") or idea.get("description") or "").strip()
+        idea["why_now"] = str(idea.get("why_now") or "").strip()
+
     hypothesis_raw = generate_response(
         client,
         build_unconditioned_hypothesis_prompt(topic, ideas),
