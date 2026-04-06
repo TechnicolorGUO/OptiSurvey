@@ -286,6 +286,29 @@ def get_operation_progress(request):
                 result = task_status.get('result')
                 progress_info = get_progress(operation_id)
                 
+                if hasattr(result, 'status_code') and getattr(result, 'status_code', 200) >= 400:
+                    error_payload = {}
+                    error_message = f"Task failed with status {result.status_code}"
+                    try:
+                        import json
+                        error_payload = json.loads(result.content.decode('utf-8'))
+                        error_message = (
+                            error_payload.get('error')
+                            or error_payload.get('message')
+                            or error_message
+                        )
+                    except Exception as e:
+                        print(f"[DEBUG] Error parsing failed HttpResponse content: {e}")
+
+                    return no_cache_json_response({
+                        **progress_info,
+                        'progress': progress_info.get('progress', -1) if progress_info.get('progress', 0) < 0 else -1,
+                        'message': error_message,
+                        'status': 'failed',
+                        'error': error_message,
+                        'result': error_payload or None
+                    })
+
                 # 检查result是否是HttpResponse对象（旧的PDF生成方式）
                 if hasattr(result, 'content'):
                     try:
@@ -2823,7 +2846,7 @@ def automatic_taxonomy_sync(request, operation_id=None):
             # 生成大纲
             outline_generator = OutlineGenerator(Global_df_selected, Global_cluster_names)
             outline_generator.get_cluster_info()
-            messages, outline = outline_generator.generate_outline_qwen(Global_survey_title, Global_cluster_num)
+            messages, outline = outline_generator.generate_outline_qwen(Global_survey_title, len(Global_cluster_names))
             
             outline_json = {'messages': messages, 'outline': parse_outline_payload(outline)}
             output_path = TXT_PATH + Global_survey_id + '/outline.json'

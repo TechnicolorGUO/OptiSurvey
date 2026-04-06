@@ -4734,7 +4734,13 @@ function select_sections() {
 						// 生成完成，加载survey内容
 						setTimeout(() => {
 							hideUploadProgress();
-							loadSurveyContent(result.result ? result.result.survey_id : null);
+							const generatedSurveyId = result.result ? result.result.survey_id : null;
+							if (!generatedSurveyId) {
+								const failureMessage = (result.result && (result.result.error || result.result.message)) || message;
+								alert("Survey generation did not return a survey ID: " + failureMessage);
+								return;
+							}
+							loadSurveyContent(generatedSurveyId);
 						}, 500);
 					} else if (status === 'failed' || progress < 0) {
 						// 生成失败

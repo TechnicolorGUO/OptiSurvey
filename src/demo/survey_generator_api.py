@@ -695,7 +695,7 @@ def process_outline_with_empty_sections_citations(outline_list, selected_outline
 
     def generate_section_with_citations_wrapper(section_info):
         level, section_title = section_info
-        section_context = context_dict[section_title]
+        section_context = context_dict.get(section_title, "")
         section_content = generate_survey_section_with_citations(
             section_context, client, section_title, citation_data_list, embedder
         )
@@ -995,6 +995,17 @@ def generate_survey_paper_new(title, outline, context_list, client, citation_dat
     return full_survey_content
 
 
+def _extract_top_level_section_number(title: str):
+    match = re.match(r'^(\d+)', title.strip())
+    if not match:
+        return None
+    return int(match.group(1))
+
+
+def _build_cluster_section_map(cluster_count: int):
+    return {section_no: section_no - 3 for section_no in range(3, 3 + cluster_count)}
+
+
 def query_embedding_for_title(
     collection_name: str, 
     title: str, 
@@ -1022,34 +1033,6 @@ def query_embedding_for_title(
             final_context += chunk.strip() + "//\n"
     return final_context
 
-# old
-# def generate_context_list(outline, collection_list):
-#     context_list = []
-#     cluster_idx = -1
-#     embedder = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-#     subsections = parse_outline_with_subsections(outline)
-    
-#     for level, title in subsections:
-#         if(title.startswith("3")):
-#             cluster_idx = 0
-#         elif(title.startswith("4")):
-#             cluster_idx = 1
-#         elif(title.startswith("5")):
-#             cluster_idx = 2
-        
-#         context_temp = ""
-#         for i in range(len(collection_list[cluster_idx])):
-#             context = query_embedding_for_title(
-#                 collection_list[cluster_idx][i], 
-#                 title, 
-#                 embedder=embedder
-#             )
-#             context_temp += context
-#             context_temp += "\n"
-#         context_list.append(context_temp)
-#     return context_list
-
-# 2025
 def generate_context_list(outline, collection_list, embedder):
 
     subsections = parse_outline_with_subsections(outline)
@@ -1058,24 +1041,29 @@ def generate_context_list(outline, collection_list, embedder):
 
     context_list_final = []
     retriever = RetrieverSingleton().get_retriever()
+    cluster_section_map = _build_cluster_section_map(len(collection_list))
+    all_collections = [coll for cluster in collection_list for coll in cluster]
     
     for index, (level, title) in enumerate(subsections, start=1):
-        if title.startswith("3"):
-            cluster_idx = 0
-        elif title.startswith("4"):
-            cluster_idx = 1
-        elif title.startswith("5"):
-            cluster_idx = 2
+        top_level_section = _extract_top_level_section_number(title)
+        if top_level_section in cluster_section_map:
+            target_collections = collection_list[cluster_section_map[top_level_section]]
         else:
-            print(f"[DEBUG] skip subsection without expected cluster prefix: {title}")
-            continue
+            # Keep the returned context list aligned with the outline even when
+            # the subsection is not tied to one of the clustered top-level sections.
+            target_collections = all_collections
+            print(
+                f"[DEBUG] subsection outside cluster section range, "
+                f"falling back to all collections | title='{title}' | "
+                f"top_level_section={top_level_section} | collections={len(target_collections)}"
+            )
         
         print(
             f"[DEBUG] context subsection {index}/{len(subsections)} | "
-            f"title='{title}' | collections={len(collection_list[cluster_idx])}"
+            f"title='{title}' | collections={len(target_collections)}"
         )
         context_temp = ""
-        for coll_name in collection_list[cluster_idx]:
+        for coll_name in target_collections:
             retrieved_context = query_embedding_for_title(
                 collection_name=coll_name,
                 title=title,

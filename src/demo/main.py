@@ -366,7 +366,7 @@ class ASG_system:
         print(self.cluster_names)
         outline_generator = OutlineGenerator(self.pipeline, self.df_selected, self.cluster_names)
         outline_generator.get_cluster_info()
-        messages, outline = outline_generator.generate_outline_qwen(self.survey_title)
+        messages, outline = outline_generator.generate_outline_qwen(self.survey_title, len(self.cluster_names))
         outline_json = {'messages': messages, 'outline': parse_outline_payload(outline)}
         output_path = f'{self.info_path}/{self.survey_id}/outline.json'
         os.makedirs(os.path.dirname(output_path), exist_ok=True)

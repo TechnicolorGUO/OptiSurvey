@@ -198,7 +198,9 @@ class OutlineGenerator():
 
         return messages, result
 
-    def generate_outline_qwen(self, survey_title, cluster_num = 3):
+    def generate_outline_qwen(self, survey_title, cluster_num = None):
+        cluster_num = cluster_num if cluster_num is not None else len(self.cluster)
+        cluster_num = min(cluster_num, len(self.cluster))
         claims = self.generate_claims()
         cluster_with_claims = ""
         cluster_names = []
@@ -212,10 +214,11 @@ class OutlineGenerator():
         #     The researcher will provides you with the title of the survey paper
         #     together with the cluster names and the descriptions for entities in each cluster.
         #     '''
+        cluster_heading_examples = ", ".join([f"[1, '{i+3} <Cluster {i}'s name>']" for i in range(cluster_num)])
         system_prompt = f'''Finish the outline of the survey paper following the format of the example : [[1, '1 Introduction'], [1, '2 Perturbations of (co)differentials'], [2, '2.1 Derivations of the tensor algebra'], [3, '2.2.1 ...']......].\
         The first element in the sub-list refers to the hierachy of the section name (from 1 to 3). Sections like Introduction and Conclusion should have the highest level (1)\
         The second element in the sub-list refers to the section name.
-        You are required to finish the second and third level subsections name under [1, '3 <Cluster 0's name>'], [1, '4 <Cluster 1's name>'] and [1, '5 <Cluster 2's name>']
+        You are required to finish the second and third level subsections name under these cluster sections: {cluster_heading_examples}
         You must not generate third level susections over *3* for each second level subsection, for example, [3, '3.1.4 xxx'], [3, '3.1.5 xxx'] are not allowed. 
         *Try to conclude the main findings of each cluster in the second and third level subsections, use highly abstract terms and phrases to describe*
         *Do not include colons, e.g. AutoSurvey: Large Language Models Can Automatically Write Surveys should be written in Large Language Models in Writing Surveys*
